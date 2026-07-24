@@ -1,0 +1,273 @@
+export type AccountType = "club" | "patrocinador";
+
+export type DealStage =
+  | "busqueda"
+  | "cualificar"
+  | "cadencia"
+  | "contacto"
+  | "agendada"
+  | "demo"
+  | "negociacion"
+  | "ganado"
+  | "perdido";
+
+export const DEAL_STAGES: DealStage[] = [
+  "busqueda",
+  "cualificar",
+  "cadencia",
+  "contacto",
+  "agendada",
+  "demo",
+  "negociacion",
+  "ganado",
+  "perdido",
+];
+
+export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
+  busqueda: "Búsqueda",
+  cualificar: "Cualificar",
+  cadencia: "Cadencia",
+  contacto: "Contacto",
+  agendada: "Agendada",
+  demo: "Demo",
+  negociacion: "Negociación",
+  ganado: "Ganado",
+  perdido: "Perdido",
+};
+
+export const DEAL_STAGE_DESCRIPTIONS: Record<DealStage, string> = {
+  busqueda: "Se buscan posibles clientes.",
+  cualificar: "Segmentar los leads y añadir todos los datos necesarios para operar.",
+  cadencia: "Intentos de contacto hasta que conseguimos ese contacto o se acaba la secuencia.",
+  contacto: "Fase en la que hablamos para agendar reunión.",
+  agendada: "Reunión de presentación en la que hablamos del problema y se agenda demo.",
+  demo: "Se muestra cómo nuestra solución resuelve sus problemas.",
+  negociacion:
+    "Se justifica el precio en base al problema y el ahorro que obtendría el cliente, para luego dar un precio.",
+  ganado: "Cliente cerrado.",
+  perdido: "El negocio no salió adelante.",
+};
+
+export const DEFAULT_CADENCE_TEMPLATE: { label: string; action: string }[] = [
+  { label: "Día 1", action: "Llamada" },
+  { label: "Día 3", action: "Email" },
+  { label: "Día 5", action: "Llamada" },
+  { label: "Día 8", action: "WhatsApp" },
+  { label: "Día 10", action: "Llamada" },
+];
+
+export type TaskPriority = "baja" | "media" | "alta";
+
+// Nota: estas Row types deben declararse con `type`, no `interface` — TypeScript
+// solo infiere una firma de índice implícita en object-type literals, no en
+// interfaces, y supabase-js exige que cada Row sea asignable a Record<string, unknown>.
+
+type Table<Row, Insert, Update> = {
+  Row: Row;
+  Insert: Insert;
+  Update: Update;
+  Relationships: [];
+};
+
+export type ProfileRow = {
+  id: string;
+  nombre: string;
+  rol: string;
+  created_at: string;
+};
+
+export type AccountRow = {
+  id: string;
+  tipo: AccountType;
+  nombre: string;
+  telefono: string | null;
+  email: string | null;
+  web: string | null;
+  external_club_id: number | null;
+  owner_name: string | null;
+  created_at: string;
+};
+
+export type ContactRow = {
+  id: string;
+  account_id: string;
+  nombre: string;
+  telefono: string | null;
+  email: string | null;
+  created_at: string;
+};
+
+export type DealRow = {
+  id: string;
+  account_id: string;
+  contact_id: string | null;
+  stage: DealStage;
+  stage_entered_at: string;
+  lost_reason: string | null;
+  amount: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DealStageHistoryRow = {
+  id: string;
+  deal_id: string;
+  from_stage: DealStage | null;
+  to_stage: DealStage;
+  changed_at: string;
+};
+
+export type CadenceStepRow = {
+  id: string;
+  deal_id: string;
+  label: string;
+  action: string;
+  done: boolean;
+  done_at: string | null;
+  position: number;
+};
+
+export type BoardColumnRow = {
+  id: string;
+  name: string;
+  position: number;
+  created_at: string;
+};
+
+export type LabelRow = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+export type TaskRow = {
+  id: string;
+  column_id: string;
+  title: string;
+  description: string | null;
+  assignee_id: string | null;
+  due_date: string | null;
+  priority: TaskPriority;
+  position: number;
+  done: boolean;
+  linked_account_id: string | null;
+  linked_deal_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TaskLabelRow = {
+  task_id: string;
+  label_id: string;
+};
+
+export type SubtaskRow = {
+  id: string;
+  task_id: string;
+  title: string;
+  done: boolean;
+  position: number;
+};
+
+export type NotificationLogRow = {
+  id: string;
+  event_type: string;
+  channel: string | null;
+  target: string | null;
+  payload: Record<string, unknown>;
+  status: string;
+  created_at: string;
+};
+
+// Vistas "con relaciones" para selects con embedding de Supabase. El cliente
+// tipado no conoce las foreign keys reales (no generamos tipos desde un
+// proyecto Supabase vivo), así que estas queries se castean explícitamente a
+// estos tipos en vez de depender del parser de embeds de supabase-js.
+export type DealWithRelations = DealRow & {
+  account: AccountRow;
+  contact: ContactRow | null;
+};
+
+export type TaskWithRelations = TaskRow & {
+  labels: LabelRow[];
+  subtasks: SubtaskRow[];
+  assignee: ProfileRow | null;
+};
+
+type Insertable<R, Optional extends keyof R = never> = Omit<
+  R,
+  "id" | "created_at" | "updated_at" | Optional
+> &
+  Partial<Pick<R, Extract<Optional, keyof R>>>;
+
+export type Database = {
+  public: {
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: {
+      account_type: AccountType;
+      deal_stage: DealStage;
+      task_priority: TaskPriority;
+    };
+    Tables: {
+      profiles: Table<ProfileRow, Insertable<ProfileRow, "rol">, Partial<ProfileRow>>;
+      accounts: Table<
+        AccountRow,
+        Insertable<AccountRow, "telefono" | "email" | "web" | "external_club_id" | "owner_name">,
+        Partial<AccountRow>
+      >;
+      contacts: Table<
+        ContactRow,
+        Insertable<ContactRow, "telefono" | "email">,
+        Partial<ContactRow>
+      >;
+      deals: Table<
+        DealRow,
+        Insertable<DealRow, "stage" | "stage_entered_at" | "contact_id" | "lost_reason" | "amount">,
+        Partial<DealRow>
+      >;
+      deal_stage_history: Table<
+        DealStageHistoryRow,
+        Insertable<DealStageHistoryRow>,
+        Partial<DealStageHistoryRow>
+      >;
+      cadence_steps: Table<
+        CadenceStepRow,
+        Insertable<CadenceStepRow, "done" | "done_at" | "position">,
+        Partial<CadenceStepRow>
+      >;
+      board_columns: Table<
+        BoardColumnRow,
+        Insertable<BoardColumnRow, "position">,
+        Partial<BoardColumnRow>
+      >;
+      labels: Table<LabelRow, Omit<LabelRow, "id">, Partial<LabelRow>>;
+      tasks: Table<
+        TaskRow,
+        Insertable<
+          TaskRow,
+          | "description"
+          | "assignee_id"
+          | "due_date"
+          | "priority"
+          | "position"
+          | "done"
+          | "linked_account_id"
+          | "linked_deal_id"
+        >,
+        Partial<TaskRow>
+      >;
+      task_labels: Table<TaskLabelRow, TaskLabelRow, Partial<TaskLabelRow>>;
+      subtasks: Table<
+        SubtaskRow,
+        Insertable<SubtaskRow, "done" | "position">,
+        Partial<SubtaskRow>
+      >;
+      notification_log: Table<
+        NotificationLogRow,
+        Insertable<NotificationLogRow, "channel" | "target" | "payload" | "status">,
+        Partial<NotificationLogRow>
+      >;
+    };
+  };
+};
