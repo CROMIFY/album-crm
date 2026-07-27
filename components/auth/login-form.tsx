@@ -65,6 +65,7 @@ export function LoginForm() {
               valor por defecto) el email y la contraseña acabarían en la URL. */}
           <form
             method="post"
+            noValidate
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col gap-4"
           >

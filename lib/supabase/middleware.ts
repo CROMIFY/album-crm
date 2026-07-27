@@ -6,6 +6,7 @@ import {
   SESSION_IDLE_TIMEOUT_MINUTES,
   SESSION_STARTED_COOKIE,
   LAST_ACTIVITY_COOKIE,
+  evaluateSession,
 } from "@/lib/supabase/session-policy";
 
 const PUBLIC_PATHS = ["/login"];
@@ -69,17 +70,16 @@ export async function updateSession(request: NextRequest) {
 
   if (user && !isPublicPath) {
     const now = Date.now();
-    const startedAt = Number(request.cookies.get(SESSION_STARTED_COOKIE)?.value);
-    const lastActivity = Number(request.cookies.get(LAST_ACTIVITY_COOKIE)?.value);
+    const startedAtRaw = Number(request.cookies.get(SESSION_STARTED_COOKIE)?.value);
+    const lastActivityRaw = Number(request.cookies.get(LAST_ACTIVITY_COOKIE)?.value);
+    const startedAt = Number.isFinite(startedAtRaw) ? startedAtRaw : null;
+    const lastActivity = Number.isFinite(lastActivityRaw) ? lastActivityRaw : null;
 
-    const sessionTooOld =
-      Number.isFinite(startedAt) && now - startedAt > SESSION_MAX_AGE_MINUTES * 60_000;
-    const idleTooLong =
-      Number.isFinite(lastActivity) && now - lastActivity > SESSION_IDLE_TIMEOUT_MINUTES * 60_000;
+    const evaluation = evaluateSession({ now, startedAt, lastActivity });
 
-    if (sessionTooOld || idleTooLong) {
+    if (evaluation.expired) {
       await supabase.auth.signOut();
-      return loginRedirect(request, response, sessionTooOld ? "session" : "idle");
+      return loginRedirect(request, response, evaluation.reason);
     }
 
     response.cookies.set(LAST_ACTIVITY_COOKIE, String(now), {
@@ -87,7 +87,7 @@ export async function updateSession(request: NextRequest) {
       maxAge: SESSION_IDLE_TIMEOUT_MINUTES * 60,
       path: "/",
     });
-    if (!Number.isFinite(startedAt)) {
+    if (startedAt === null) {
       response.cookies.set(SESSION_STARTED_COOKIE, String(now), {
         ...SECURE_COOKIE_OPTIONS,
         maxAge: SESSION_MAX_AGE_MINUTES * 60,
