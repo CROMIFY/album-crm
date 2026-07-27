@@ -18,8 +18,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createDeal } from "@/lib/actions/deals";
-import type { AccountType } from "@/lib/types";
+import {
+  PROVINCIAS_ESPANA,
+  SPONSOR_LEVELS,
+  SPONSOR_LEVEL_LABELS,
+  SPONSOR_SCOPE_LABELS,
+  type AccountType,
+  type SponsorLevel,
+  type SponsorScope,
+} from "@/lib/types";
 
 const schema = z.object({
   accountName: z.string().min(1, "Obligatorio"),
@@ -37,6 +52,9 @@ type FormValues = z.infer<typeof schema>;
 export function NewDealDialog({ tipo }: { tipo: AccountType }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [provincia, setProvincia] = useState<string>("");
+  const [alcance, setAlcance] = useState<SponsorScope>("local");
+  const [nivel, setNivel] = useState<SponsorLevel>("nivel_1");
   const {
     register,
     handleSubmit,
@@ -45,6 +63,7 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const entidad = tipo === "club" ? "club" : "patrocinador";
+  const esPatrocinador = tipo === "patrocinador";
 
   async function onSubmit(values: FormValues) {
     setLoading(true);
@@ -55,6 +74,9 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
         accountPhone: values.accountPhone,
         accountEmail: values.accountEmail,
         accountWeb: values.accountWeb,
+        provincia: provincia || undefined,
+        alcance: esPatrocinador ? alcance : undefined,
+        nivel: esPatrocinador ? nivel : undefined,
         contactName: values.contactName,
         contactPhone: values.contactPhone,
         contactEmail: values.contactEmail,
@@ -62,6 +84,9 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
       });
       toast.success("Negocio creado");
       reset();
+      setProvincia("");
+      setAlcance("local");
+      setNivel("nivel_1");
       setOpen(false);
     } catch (err) {
       toast.error("No se pudo crear el negocio", {
@@ -112,6 +137,55 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
             <Label>Web</Label>
             <Input {...register("accountWeb")} />
           </div>
+          <div className="flex flex-col gap-2">
+            <Label>Provincia</Label>
+            <Select value={provincia || undefined} onValueChange={setProvincia}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Sin especificar" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROVINCIAS_ESPANA.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {esPatrocinador && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2">
+                <Label>Alcance</Label>
+                <Select value={alcance} onValueChange={(v) => setAlcance(v as SponsorScope)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(SPONSOR_SCOPE_LABELS) as SponsorScope[]).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {SPONSOR_SCOPE_LABELS[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Nivel</Label>
+                <Select value={nivel} onValueChange={(v) => setNivel(v as SponsorLevel)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SPONSOR_LEVELS.map((n) => (
+                      <SelectItem key={n} value={n}>
+                        {SPONSOR_LEVEL_LABELS[n]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2 border-t pt-3">
             <Label>Nombre del contacto</Label>

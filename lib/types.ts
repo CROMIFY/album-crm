@@ -1,5 +1,76 @@
 export type AccountType = "club" | "patrocinador";
 
+export type SponsorScope = "global" | "local";
+export type SponsorLevel = "nivel_1" | "nivel_2" | "nivel_3";
+
+export const SPONSOR_SCOPE_LABELS: Record<SponsorScope, string> = {
+  global: "Global",
+  local: "Local",
+};
+
+export const SPONSOR_LEVEL_LABELS: Record<SponsorLevel, string> = {
+  nivel_1: "Nivel 1",
+  nivel_2: "Nivel 2",
+  nivel_3: "Nivel 3",
+};
+
+export const SPONSOR_LEVELS: SponsorLevel[] = ["nivel_1", "nivel_2", "nivel_3"];
+
+export const PROVINCIAS_ESPANA: string[] = [
+  "Álava",
+  "Albacete",
+  "Alicante",
+  "Almería",
+  "Asturias",
+  "Ávila",
+  "Badajoz",
+  "Barcelona",
+  "Burgos",
+  "Cáceres",
+  "Cádiz",
+  "Cantabria",
+  "Castellón",
+  "Ciudad Real",
+  "Córdoba",
+  "Cuenca",
+  "Gerona",
+  "Granada",
+  "Guadalajara",
+  "Guipúzcoa",
+  "Huelva",
+  "Huesca",
+  "Islas Baleares",
+  "Jaén",
+  "La Coruña",
+  "La Rioja",
+  "Las Palmas",
+  "León",
+  "Lérida",
+  "Lugo",
+  "Madrid",
+  "Málaga",
+  "Murcia",
+  "Navarra",
+  "Orense",
+  "Palencia",
+  "Pontevedra",
+  "Salamanca",
+  "Santa Cruz de Tenerife",
+  "Segovia",
+  "Sevilla",
+  "Soria",
+  "Tarragona",
+  "Teruel",
+  "Toledo",
+  "Valencia",
+  "Valladolid",
+  "Vizcaya",
+  "Zamora",
+  "Zaragoza",
+  "Ceuta",
+  "Melilla",
+];
+
 export type DealStage =
   | "busqueda"
   | "cualificar"
@@ -85,6 +156,9 @@ export type AccountRow = {
   web: string | null;
   external_club_id: number | null;
   owner_name: string | null;
+  provincia: string | null;
+  alcance: SponsorScope | null;
+  nivel: SponsorLevel | null;
   created_at: string;
 };
 
@@ -208,12 +282,24 @@ export type Database = {
       account_type: AccountType;
       deal_stage: DealStage;
       task_priority: TaskPriority;
+      sponsor_scope: SponsorScope;
+      sponsor_level: SponsorLevel;
     };
     Tables: {
       profiles: Table<ProfileRow, Insertable<ProfileRow, "rol">, Partial<ProfileRow>>;
       accounts: Table<
         AccountRow,
-        Insertable<AccountRow, "telefono" | "email" | "web" | "external_club_id" | "owner_name">,
+        Insertable<
+          AccountRow,
+          | "telefono"
+          | "email"
+          | "web"
+          | "external_club_id"
+          | "owner_name"
+          | "provincia"
+          | "alcance"
+          | "nivel"
+        >,
         Partial<AccountRow>
       >;
       contacts: Table<

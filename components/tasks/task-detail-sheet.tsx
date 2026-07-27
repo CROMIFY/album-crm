@@ -41,6 +41,7 @@ import {
   toggleSubtask,
   deleteSubtask,
 } from "@/lib/actions/tasks";
+import { CreateLabelButton } from "@/components/tasks/create-label-button";
 import type { AccountRow, LabelRow, ProfileRow, TaskPriority, TaskWithRelations } from "@/lib/types";
 
 export function TaskDetailSheet({
@@ -307,7 +308,7 @@ function TaskDetailForm({
 
         <div className="flex flex-col gap-2 border-t pt-4">
           <Label className="text-xs">Etiquetas</Label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {labels.map((label) => {
               const active = activeLabelIds.has(label.id);
               return (
@@ -321,6 +322,7 @@ function TaskDetailForm({
                 </button>
               );
             })}
+            <CreateLabelButton />
           </div>
         </div>
 

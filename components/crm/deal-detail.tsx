@@ -34,7 +34,14 @@ import {
   toggleCadenceStep,
   deleteCadenceStep,
 } from "@/lib/actions/deals";
-import { DEAL_STAGES, DEAL_STAGE_LABELS, DEAL_STAGE_DESCRIPTIONS } from "@/lib/types";
+import { EditAccountDialog } from "@/components/crm/edit-account-dialog";
+import {
+  DEAL_STAGES,
+  DEAL_STAGE_LABELS,
+  DEAL_STAGE_DESCRIPTIONS,
+  SPONSOR_SCOPE_LABELS,
+  SPONSOR_LEVEL_LABELS,
+} from "@/lib/types";
 import type {
   AccountType,
   CadenceStepRow,
@@ -94,11 +101,23 @@ export function DealDetail({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium">Cuenta</CardTitle>
+            <EditAccountDialog account={deal.account} dealId={deal.id} />
           </CardHeader>
           <CardContent className="text-sm">
+            {tipo === "patrocinador" && (deal.account.alcance || deal.account.nivel) && (
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {deal.account.alcance && (
+                  <Badge variant="secondary">{SPONSOR_SCOPE_LABELS[deal.account.alcance]}</Badge>
+                )}
+                {deal.account.nivel && (
+                  <Badge variant="outline">{SPONSOR_LEVEL_LABELS[deal.account.nivel]}</Badge>
+                )}
+              </div>
+            )}
             <dl className="flex flex-col gap-1">
+              <Row label="Provincia" value={deal.account.provincia} />
               <Row label="Teléfono" value={deal.account.telefono} />
               <Row label="Email" value={deal.account.email} />
               <Row label="Web" value={deal.account.web} />

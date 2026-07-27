@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
 import { UserMenu } from "@/components/user-menu";
+import { ModeToggle } from "@/components/mode-toggle";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -32,6 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
           <div className="flex items-center gap-2">
             <div id="header-actions" className="flex items-center gap-2" />
+            <ModeToggle />
             <UserMenu nombre={profile?.nombre ?? user.email ?? "Usuario"} email={user.email ?? ""} />
           </div>
         </header>

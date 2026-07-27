@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createTask } from "@/lib/actions/tasks";
+import { CreateLabelButton } from "@/components/tasks/create-label-button";
 import type { BoardColumnRow, LabelRow, ProfileRow, TaskPriority } from "@/lib/types";
 
 export function NewTaskDialog({
@@ -156,7 +157,7 @@ export function NewTaskDialog({
           </div>
           <div className="flex flex-col gap-2">
             <Label>Etiquetas</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {labels.map((label) => {
                 const active = labelIds.has(label.id);
                 return (
@@ -171,6 +172,7 @@ export function NewTaskDialog({
                   </button>
                 );
               })}
+              <CreateLabelButton />
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ export async function fetchDealsByAccountType(tipo: AccountType) {
   const { data, error } = await supabase
     .from("deals")
     .select(
-      "*, account:accounts!inner(id,tipo,nombre,telefono,email,web,external_club_id,created_at), contact:contacts(id,account_id,nombre,telefono,email,created_at)"
+      "*, account:accounts!inner(id,tipo,nombre,telefono,email,web,external_club_id,owner_name,provincia,alcance,nivel,created_at), contact:contacts(id,account_id,nombre,telefono,email,created_at)"
     )
     .eq("account.tipo", tipo)
     .order("created_at", { ascending: true });
@@ -24,7 +24,7 @@ export async function fetchDealDetail(dealId: string) {
   const { data: deal, error: dealError } = await supabase
     .from("deals")
     .select(
-      "*, account:accounts(id,tipo,nombre,telefono,email,web,external_club_id,created_at), contact:contacts(id,account_id,nombre,telefono,email,created_at)"
+      "*, account:accounts(id,tipo,nombre,telefono,email,web,external_club_id,owner_name,provincia,alcance,nivel,created_at), contact:contacts(id,account_id,nombre,telefono,email,created_at)"
     )
     .eq("id", dealId)
     .single();

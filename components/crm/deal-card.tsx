@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "@/components/ui/card";
-import type { DealWithRelations } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { SPONSOR_LEVEL_LABELS, SPONSOR_SCOPE_LABELS, type DealWithRelations } from "@/lib/types";
 
 export function DealCard({ deal }: { deal: DealWithRelations }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -33,6 +34,25 @@ export function DealCard({ deal }: { deal: DealWithRelations }) {
         </Link>
         {deal.contact && (
           <span className="text-muted-foreground text-xs">{deal.contact.nombre}</span>
+        )}
+        {(deal.account.provincia || deal.account.alcance || deal.account.nivel) && (
+          <div className="flex flex-wrap gap-1">
+            {deal.account.provincia && (
+              <Badge variant="outline" className="text-[10px]">
+                {deal.account.provincia}
+              </Badge>
+            )}
+            {deal.account.alcance && (
+              <Badge variant="secondary" className="text-[10px]">
+                {SPONSOR_SCOPE_LABELS[deal.account.alcance]}
+              </Badge>
+            )}
+            {deal.account.nivel && (
+              <Badge variant="secondary" className="text-[10px]">
+                {SPONSOR_LEVEL_LABELS[deal.account.nivel]}
+              </Badge>
+            )}
+          </div>
         )}
         {deal.amount != null && (
           <span className="text-xs font-medium tabular-nums">

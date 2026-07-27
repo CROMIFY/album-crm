@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { DEFAULT_CADENCE_TEMPLATE, type AccountType, type DealStage } from "@/lib/types";
+import {
+  DEFAULT_CADENCE_TEMPLATE,
+  type AccountType,
+  type DealStage,
+  type SponsorScope,
+  type SponsorLevel,
+} from "@/lib/types";
 
 function funnelPath(tipo: AccountType) {
   return tipo === "club" ? "/crm/clubes" : "/crm/patrocinios";
@@ -34,6 +40,9 @@ export async function createDeal(input: {
   accountPhone?: string;
   accountEmail?: string;
   accountWeb?: string;
+  provincia?: string;
+  alcance?: SponsorScope;
+  nivel?: SponsorLevel;
   contactName: string;
   contactPhone?: string;
   contactEmail?: string;
@@ -49,6 +58,9 @@ export async function createDeal(input: {
       telefono: input.accountPhone || null,
       email: input.accountEmail || null,
       web: input.accountWeb || null,
+      provincia: input.provincia || null,
+      alcance: input.tipo === "patrocinador" ? input.alcance ?? null : null,
+      nivel: input.tipo === "patrocinador" ? input.nivel ?? null : null,
     })
     .select()
     .single();
@@ -74,6 +86,40 @@ export async function createDeal(input: {
   if (dealError) throw new Error(dealError.message);
 
   revalidatePath(funnelPath(input.tipo));
+}
+
+export async function updateAccount(
+  accountId: string,
+  dealId: string,
+  tipo: AccountType,
+  input: {
+    nombre: string;
+    telefono?: string;
+    email?: string;
+    web?: string;
+    provincia?: string;
+    alcance?: SponsorScope;
+    nivel?: SponsorLevel;
+  }
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("accounts")
+    .update({
+      nombre: input.nombre,
+      telefono: input.telefono || null,
+      email: input.email || null,
+      web: input.web || null,
+      provincia: input.provincia || null,
+      alcance: tipo === "patrocinador" ? input.alcance ?? null : null,
+      nivel: tipo === "patrocinador" ? input.nivel ?? null : null,
+    })
+    .eq("id", accountId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(funnelPath(tipo));
+  revalidatePath(`/crm/negocios/${dealId}`);
 }
 
 export async function updateDealStage(dealId: string, tipo: AccountType, stage: DealStage) {
