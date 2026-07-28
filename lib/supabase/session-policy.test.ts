@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateSession } from "./session-policy";
+import { evaluateSession, bypassesUserSession } from "./session-policy";
 
 const HOUR = 60 * 60_000;
 const MINUTE = 60_000;
@@ -53,5 +53,19 @@ describe("evaluateSession", () => {
     expect(
       evaluateSession({ now, startedAt: null, lastActivity: null, ...opts })
     ).toEqual({ expired: false });
+  });
+});
+
+describe("bypassesUserSession", () => {
+  it("bypasses API routes (cron, webhooks authenticate with their own secret)", () => {
+    expect(bypassesUserSession("/api/cron/task-reminders")).toBe(true);
+    expect(bypassesUserSession("/api/webhooks/github")).toBe(true);
+  });
+
+  it("does not bypass regular pages, which must go through the login gate", () => {
+    expect(bypassesUserSession("/")).toBe(false);
+    expect(bypassesUserSession("/login")).toBe(false);
+    expect(bypassesUserSession("/tareas")).toBe(false);
+    expect(bypassesUserSession("/crm/clubes")).toBe(false);
   });
 });

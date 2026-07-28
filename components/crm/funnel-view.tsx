@@ -37,7 +37,7 @@ export function FunnelView({
           <KanbanBoard tipo={tipo} deals={deals} />
         </TabsContent>
         <TabsContent value="metricas">
-          <DashboardCharts {...dashboard} />
+          <DashboardCharts tipo={tipo} {...dashboard} />
         </TabsContent>
       </Tabs>
     </div>

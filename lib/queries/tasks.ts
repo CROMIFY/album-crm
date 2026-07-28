@@ -17,7 +17,7 @@ export async function fetchBoard() {
       supabase
         .from("tasks")
         .select(
-          "*, subtasks(*), assignee:profiles(id,nombre,rol,created_at), task_labels(label:labels(*))"
+          "*, subtasks(*), task_assignees(profile:profiles(id,nombre,email,rol,created_at)), task_labels(label:labels(*))"
         )
         .order("position", { ascending: true }),
       supabase.from("labels").select("*"),
@@ -27,12 +27,14 @@ export async function fetchBoard() {
 
   type RawTask = TaskWithRelations & {
     task_labels: { label: LabelRow }[];
+    task_assignees: { profile: ProfileRow }[];
     subtasks: SubtaskRow[];
   };
 
   const tasks: TaskWithRelations[] = ((rawTasks ?? []) as unknown as RawTask[]).map((t) => ({
     ...t,
     labels: t.task_labels.map((tl) => tl.label),
+    assignees: t.task_assignees.map((ta) => ta.profile),
   }));
 
   return {

@@ -11,11 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { renameColumn, deleteColumn } from "@/lib/actions/tasks";
+import { renameColumn, deleteColumn, setColumnIsDone } from "@/lib/actions/tasks";
 import type { BoardColumnRow, TaskWithRelations } from "@/lib/types";
 
 export function TaskColumn({
@@ -42,6 +43,16 @@ export function TaskColumn({
     } catch (err) {
       toast.error("No se pudo renombrar", { description: err instanceof Error ? err.message : undefined });
       setName(column.name);
+    }
+  }
+
+  async function handleToggleDone(checked: boolean) {
+    try {
+      await setColumnIsDone(column.id, checked);
+    } catch (err) {
+      toast.error("No se pudo actualizar la columna", {
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   }
 
@@ -85,6 +96,12 @@ export function TaskColumn({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditing(true)}>Renombrar</DropdownMenuItem>
+              <DropdownMenuCheckboxItem
+                checked={column.is_done_column}
+                onCheckedChange={handleToggleDone}
+              >
+                Marcar como columna &quot;Hecho&quot;
+              </DropdownMenuCheckboxItem>
               <DropdownMenuItem variant="destructive" onClick={handleDelete}>
                 Eliminar columna
               </DropdownMenuItem>

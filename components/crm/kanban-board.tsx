@@ -5,7 +5,7 @@ import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } f
 import { toast } from "sonner";
 import { KanbanColumn } from "@/components/crm/kanban-column";
 import { updateDealStage } from "@/lib/actions/deals";
-import { DEAL_STAGES, DEAL_STAGE_LABELS, DEAL_STAGE_DESCRIPTIONS } from "@/lib/types";
+import { DEAL_STAGES, DEAL_STAGE_LABELS, DEAL_STAGE_DESCRIPTIONS, ACCOUNT_TYPE_LABELS } from "@/lib/types";
 import type { AccountType, DealStage, DealWithRelations } from "@/lib/types";
 
 const PHASES = [
@@ -54,7 +54,7 @@ export function KanbanBoard({ tipo, deals }: { tipo: AccountType; deals: DealWit
       try {
         await updateDealStage(dealId, tipo, stage);
       } catch (err) {
-        toast.error("No se pudo mover el negocio", {
+        toast.error(`No se pudo mover el ${ACCOUNT_TYPE_LABELS[tipo]}`, {
           description: err instanceof Error ? err.message : undefined,
         });
       }

@@ -85,10 +85,11 @@ export async function fetchFunnelDashboard(tipo: AccountType) {
         .order("changed_at", { ascending: true })
     : { data: [] };
 
-  // Etapa de salida: última etapa (from_stage) antes de entrar en ganado/perdido.
+  // Etapa de salida: última etapa (from_stage) antes de entrar en
+  // ganado/perdido/aplazado (los tres son salidas del funnel activo).
   const exitStageCounts: Record<string, number> = {};
   for (const row of history ?? []) {
-    if (row.to_stage === "ganado" || row.to_stage === "perdido") {
+    if (row.to_stage === "ganado" || row.to_stage === "perdido" || row.to_stage === "aplazado") {
       const key = row.from_stage ?? "sin_etapa";
       exitStageCounts[key] = (exitStageCounts[key] ?? 0) + 1;
     }

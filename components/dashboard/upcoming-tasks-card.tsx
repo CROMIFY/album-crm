@@ -37,7 +37,7 @@ export function UpcomingTasksCard({
     title: string;
     due_date: string;
     priority: TaskPriority;
-    assignee: { nombre: string } | null;
+    assignees: { nombre: string }[];
   }[];
 }) {
   return (
@@ -61,7 +61,8 @@ export function UpcomingTasksCard({
             </TableHeader>
             <TableBody>
               {tasks.map((task) => {
-                const initials = task.assignee?.nombre
+                const [first, ...rest] = task.assignees;
+                const initials = first?.nombre
                   .split(" ")
                   .map((p) => p[0])
                   .slice(0, 2)
@@ -71,12 +72,15 @@ export function UpcomingTasksCard({
                   <TableRow key={task.id}>
                     <TableCell className="font-medium">{task.title}</TableCell>
                     <TableCell>
-                      {task.assignee ? (
+                      {first ? (
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
                           </Avatar>
-                          <span className="text-sm">{task.assignee.nombre}</span>
+                          <span className="text-sm">
+                            {first.nombre}
+                            {rest.length > 0 && ` +${rest.length}`}
+                          </span>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm">Sin asignar</span>

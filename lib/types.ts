@@ -1,5 +1,15 @@
 export type AccountType = "club" | "patrocinador";
 
+export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  club: "club",
+  patrocinador: "patrocinador",
+};
+
+export const ACCOUNT_TYPE_LABELS_PLURAL: Record<AccountType, string> = {
+  club: "Clubes",
+  patrocinador: "Patrocinadores",
+};
+
 export type SponsorScope = "global" | "local";
 export type SponsorLevel = "nivel_1" | "nivel_2" | "nivel_3";
 
@@ -142,6 +152,7 @@ type Table<Row, Insert, Update> = {
 export type ProfileRow = {
   id: string;
   nombre: string;
+  email: string;
   rol: string;
   created_at: string;
 };
@@ -204,6 +215,7 @@ export type BoardColumnRow = {
   id: string;
   name: string;
   position: number;
+  is_done_column: boolean;
   created_at: string;
 };
 
@@ -218,7 +230,6 @@ export type TaskRow = {
   column_id: string;
   title: string;
   description: string | null;
-  assignee_id: string | null;
   due_date: string | null;
   priority: TaskPriority;
   position: number;
@@ -232,6 +243,11 @@ export type TaskRow = {
 export type TaskLabelRow = {
   task_id: string;
   label_id: string;
+};
+
+export type TaskAssigneeRow = {
+  task_id: string;
+  profile_id: string;
 };
 
 export type SubtaskRow = {
@@ -264,7 +280,7 @@ export type DealWithRelations = DealRow & {
 export type TaskWithRelations = TaskRow & {
   labels: LabelRow[];
   subtasks: SubtaskRow[];
-  assignee: ProfileRow | null;
+  assignees: ProfileRow[];
 };
 
 type Insertable<R, Optional extends keyof R = never> = Omit<
@@ -323,7 +339,7 @@ export type Database = {
       >;
       board_columns: Table<
         BoardColumnRow,
-        Insertable<BoardColumnRow, "position">,
+        Insertable<BoardColumnRow, "position" | "is_done_column">,
         Partial<BoardColumnRow>
       >;
       labels: Table<LabelRow, Omit<LabelRow, "id">, Partial<LabelRow>>;
@@ -332,7 +348,6 @@ export type Database = {
         Insertable<
           TaskRow,
           | "description"
-          | "assignee_id"
           | "due_date"
           | "priority"
           | "position"
@@ -343,6 +358,7 @@ export type Database = {
         Partial<TaskRow>
       >;
       task_labels: Table<TaskLabelRow, TaskLabelRow, Partial<TaskLabelRow>>;
+      task_assignees: Table<TaskAssigneeRow, TaskAssigneeRow, Partial<TaskAssigneeRow>>;
       subtasks: Table<
         SubtaskRow,
         Insertable<SubtaskRow, "done" | "position">,

@@ -32,7 +32,7 @@ export async function fetchDashboardData() {
         .lt("due_date", today),
       supabase
         .from("tasks")
-        .select("id, title, due_date, priority, assignee:profiles(nombre)")
+        .select("id, title, due_date, priority, task_assignees(profile:profiles(nombre))")
         .eq("done", false)
         .not("due_date", "is", null)
         .order("due_date", { ascending: true })
@@ -49,7 +49,11 @@ export async function fetchDashboardData() {
     title: string;
     due_date: string;
     priority: "baja" | "media" | "alta";
-    assignee: { nombre: string } | null;
+    assignees: { nombre: string }[];
+  };
+
+  type RawUpcomingTask = Omit<UpcomingTask, "assignees"> & {
+    task_assignees: { profile: { nombre: string } }[];
   };
 
   type ActivityRow = {
@@ -69,7 +73,10 @@ export async function fetchDashboardData() {
     },
     clubStageCounts: clubDashboard.stageCounts,
     sponsorStageCounts: sponsorDashboard.stageCounts,
-    upcomingTasks: (tasksRes.data ?? []) as unknown as UpcomingTask[],
+    upcomingTasks: ((tasksRes.data ?? []) as unknown as RawUpcomingTask[]).map((t) => ({
+      ...t,
+      assignees: t.task_assignees.map((ta) => ta.profile),
+    })),
     activity: (activityRes.data ?? []) as unknown as ActivityRow[],
   };
 }

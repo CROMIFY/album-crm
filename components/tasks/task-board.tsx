@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { TaskColumn } from "@/components/tasks/task-column";
 import { NewColumnButton } from "@/components/tasks/new-column-button";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
+import { ManageLabelsDialog } from "@/components/tasks/manage-labels-dialog";
 import { TaskDetailSheet } from "@/components/tasks/task-detail-sheet";
 import { HeaderPortal } from "@/components/header-portal";
 import { updateTaskColumn } from "@/lib/actions/tasks";
@@ -45,6 +46,16 @@ export function TaskBoard({
 
   const openTask = optimisticTasks.find((t) => t.id === openTaskId) ?? null;
 
+  const labelUsageCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const task of optimisticTasks) {
+      for (const label of task.labels) {
+        map.set(label.id, (map.get(label.id) ?? 0) + 1);
+      }
+    }
+    return map;
+  }, [optimisticTasks]);
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
@@ -68,6 +79,7 @@ export function TaskBoard({
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4">
       <HeaderPortal>
+        <ManageLabelsDialog labels={labels} usageCounts={labelUsageCounts} />
         <NewTaskDialog columns={columns} labels={labels} profiles={profiles} />
       </HeaderPortal>
       <h1 className="text-lg font-semibold">Tareas</h1>

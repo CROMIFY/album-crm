@@ -31,6 +31,7 @@ import {
   SPONSOR_LEVELS,
   SPONSOR_LEVEL_LABELS,
   SPONSOR_SCOPE_LABELS,
+  ACCOUNT_TYPE_LABELS,
   type AccountType,
   type SponsorLevel,
   type SponsorScope,
@@ -62,7 +63,7 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  const entidad = tipo === "club" ? "club" : "patrocinador";
+  const entidad = ACCOUNT_TYPE_LABELS[tipo];
   const esPatrocinador = tipo === "patrocinador";
 
   async function onSubmit(values: FormValues) {
@@ -82,14 +83,14 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
         contactEmail: values.contactEmail,
         amount: values.amount ? Number(values.amount) : undefined,
       });
-      toast.success("Negocio creado");
+      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} creado`);
       reset();
       setProvincia("");
       setAlcance("local");
       setNivel("nivel_1");
       setOpen(false);
     } catch (err) {
-      toast.error("No se pudo crear el negocio", {
+      toast.error(`No se pudo crear el ${entidad}`, {
         description: err instanceof Error ? err.message : undefined,
       });
     } finally {
@@ -109,7 +110,7 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
         <DialogHeader>
           <DialogTitle>Nuevo {entidad}</DialogTitle>
           <DialogDescription>
-            Se crea la cuenta, el contacto y el negocio en la etapa &quot;Búsqueda&quot;.
+            Se crea la cuenta, el contacto y el {entidad} en la etapa &quot;Búsqueda&quot;.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -215,7 +216,7 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
 
           <DialogFooter>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creando…" : "Crear negocio"}
+              {loading ? "Creando…" : `Crear ${entidad}`}
             </Button>
           </DialogFooter>
         </form>

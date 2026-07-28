@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import {
   DEAL_STAGE_DESCRIPTIONS,
   SPONSOR_SCOPE_LABELS,
   SPONSOR_LEVEL_LABELS,
+  ACCOUNT_TYPE_LABELS,
 } from "@/lib/types";
 import type {
   AccountType,
@@ -58,10 +60,13 @@ export function DealDetail({
   history: DealStageHistoryRow[];
   cadence: CadenceStepRow[];
 }) {
+  const router = useRouter();
   const [, startTransition] = useTransition();
   const tipo: AccountType = deal.account.tipo;
-  const isClosed =
-    deal.stage === "ganado" || deal.stage === "perdido" || deal.stage === "aplazado";
+  // "aplazado" no cuenta como cerrado: a diferencia de ganado/perdido, está
+  // pensado para retomarse más adelante, así que el selector de etapa y el
+  // diálogo de cierre deben seguir disponibles.
+  const isClosed = deal.stage === "ganado" || deal.stage === "perdido";
 
   function handleStageChange(stage: string) {
     startTransition(async () => {
@@ -77,10 +82,19 @@ export function DealDetail({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-mb-2 self-start"
+        onClick={() => router.back()}
+      >
+        <ArrowLeft />
+        Volver
+      </Button>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">{deal.account.nombre}</h1>
-          <p className="text-muted-foreground text-sm capitalize">{deal.account.tipo}</p>
+          <p className="text-muted-foreground text-sm capitalize">{ACCOUNT_TYPE_LABELS[tipo]}</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={deal.stage} onValueChange={handleStageChange} disabled={isClosed}>
@@ -207,12 +221,13 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
+  const entidad = ACCOUNT_TYPE_LABELS[tipo];
 
   async function markWon() {
     setLoading(true);
     try {
       await updateDealOutcome(dealId, tipo, "ganado");
-      toast.success("Negocio marcado como ganado");
+      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como ganado`);
       setOpen(false);
     } catch (err) {
       toast.error("Error", { description: err instanceof Error ? err.message : undefined });
@@ -225,7 +240,7 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
     setLoading(true);
     try {
       await updateDealOutcome(dealId, tipo, "perdido", reason);
-      toast.success("Negocio marcado como perdido");
+      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como perdido`);
       setOpen(false);
     } catch (err) {
       toast.error("Error", { description: err instanceof Error ? err.message : undefined });
@@ -238,7 +253,7 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
     setLoading(true);
     try {
       await updateDealOutcome(dealId, tipo, "aplazado", reason);
-      toast.success("Negocio marcado como aplazado");
+      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como aplazado`);
       setOpen(false);
     } catch (err) {
       toast.error("Error", { description: err instanceof Error ? err.message : undefined });
@@ -250,11 +265,11 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Cerrar negocio</Button>
+        <Button variant="outline">Cerrar {entidad}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Cerrar negocio</DialogTitle>
+          <DialogTitle>Cerrar {entidad}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <Button onClick={markWon} disabled={loading} variant="default">

@@ -6,6 +6,17 @@ export const SESSION_IDLE_TIMEOUT_MINUTES = Number(process.env.SESSION_IDLE_TIME
 export const SESSION_STARTED_COOKIE = "crm_session_started_at";
 export const LAST_ACTIVITY_COOKIE = "crm_last_activity_at";
 
+/**
+ * Rutas de API (cron, webhooks) que se autentican con su propio secreto por
+ * cabecera (CRON_SECRET / GITHUB_WEBHOOK_SECRET), no con la sesión de
+ * usuario. Si el middleware las trata como una ruta protegida normal, una
+ * llamada sin cookies de sesión (el cron de Vercel, el webhook de GitHub)
+ * recibe un redirect a /login en vez de llegar a la propia ruta.
+ */
+export function bypassesUserSession(pathname: string): boolean {
+  return pathname.startsWith("/api/");
+}
+
 export type SessionEvaluation =
   | { expired: false }
   | { expired: true; reason: "session" | "idle" };

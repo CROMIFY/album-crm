@@ -34,12 +34,15 @@ export function TaskCard({
 
   const doneSubtasks = task.subtasks?.filter((s) => s.done).length ?? 0;
   const totalSubtasks = task.subtasks?.length ?? 0;
-  const initials = task.assignee?.nombre
-    ?.split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+
+  function initialsFor(nombre: string) {
+    return nombre
+      .split(" ")
+      .map((p) => p[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  }
 
   async function handleDoneChange(checked: boolean) {
     try {
@@ -102,10 +105,19 @@ export function TaskCard({
               </span>
             )}
           </div>
-          {task.assignee && (
-            <Avatar className="h-5 w-5">
-              <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
-            </Avatar>
+          {task.assignees.length > 0 && (
+            <div className="flex -space-x-1.5">
+              {task.assignees.slice(0, 3).map((assignee) => (
+                <Avatar key={assignee.id} className="ring-card h-5 w-5 ring-2">
+                  <AvatarFallback className="text-[9px]">{initialsFor(assignee.nombre)}</AvatarFallback>
+                </Avatar>
+              ))}
+              {task.assignees.length > 3 && (
+                <Avatar className="ring-card h-5 w-5 ring-2">
+                  <AvatarFallback className="text-[9px]">+{task.assignees.length - 3}</AvatarFallback>
+                </Avatar>
+              )}
+            </div>
           )}
         </div>
       </CardContent>

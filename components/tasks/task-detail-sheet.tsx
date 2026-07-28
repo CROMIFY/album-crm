@@ -117,7 +117,7 @@ type Draft = {
   description: string;
   priority: TaskPriority;
   dueDate: string;
-  assigneeId: string;
+  assigneeIds: string[];
   linkedAccountId: string;
 };
 
@@ -127,9 +127,13 @@ function draftFromTask(task: TaskWithRelations): Draft {
     description: task.description ?? "",
     priority: task.priority,
     dueDate: task.due_date ?? "",
-    assigneeId: task.assignee_id ?? "none",
+    assigneeIds: task.assignees.map((a) => a.id),
     linkedAccountId: task.linked_account_id ?? "none",
   };
+}
+
+function normalizeDraft(d: Draft) {
+  return JSON.stringify({ ...d, assigneeIds: [...d.assigneeIds].sort() });
 }
 
 function TaskDetailForm({
@@ -155,7 +159,7 @@ function TaskDetailForm({
   const [saving, setSaving] = useState(false);
   const [newSubtask, setNewSubtask] = useState("");
 
-  const isDirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const isDirty = normalizeDraft(draft) !== normalizeDraft(saved);
 
   useEffect(() => {
     onDirtyChange(isDirty);
@@ -163,6 +167,15 @@ function TaskDetailForm({
 
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
+  }
+
+  function toggleAssignee(id: string) {
+    setDraft((d) => ({
+      ...d,
+      assigneeIds: d.assigneeIds.includes(id)
+        ? d.assigneeIds.filter((x) => x !== id)
+        : [...d.assigneeIds, id],
+    }));
   }
 
   async function handleSave() {
@@ -173,7 +186,7 @@ function TaskDetailForm({
         description: draft.description || null,
         priority: draft.priority,
         dueDate: draft.dueDate || null,
-        assigneeId: draft.assigneeId === "none" ? null : draft.assigneeId,
+        assigneeIds: draft.assigneeIds,
         linkedAccountId: draft.linkedAccountId === "none" ? null : draft.linkedAccountId,
       });
       setSaved(draft);
@@ -270,19 +283,25 @@ function TaskDetailForm({
 
         <div className="flex flex-col gap-2">
           <Label className="text-xs">Asignado</Label>
-          <Select value={draft.assigneeId} onValueChange={(v) => set("assigneeId", v)}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sin asignar</SelectItem>
-              {profiles.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
+          <div className="flex flex-wrap gap-2">
+            {profiles.map((p) => {
+              const active = draft.assigneeIds.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => toggleAssignee(p.id)}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-transparent text-muted-foreground hover:bg-muted"
+                  }`}
+                >
                   {p.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex flex-col gap-2">

@@ -41,12 +41,21 @@ export function NewTaskDialog({
   const [description, setDescription] = useState("");
   const [columnId, setColumnId] = useState(columns[0]?.id ?? "");
   const [priority, setPriority] = useState<TaskPriority>("media");
-  const [assigneeId, setAssigneeId] = useState<string>("none");
+  const [assigneeIds, setAssigneeIds] = useState<Set<string>>(new Set());
   const [dueDate, setDueDate] = useState("");
   const [labelIds, setLabelIds] = useState<Set<string>>(new Set());
 
   function toggleLabel(id: string) {
     setLabelIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAssignee(id: string) {
+    setAssigneeIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -62,7 +71,7 @@ export function NewTaskDialog({
         columnId,
         title,
         description,
-        assigneeId: assigneeId === "none" ? undefined : assigneeId,
+        assigneeIds: Array.from(assigneeIds),
         dueDate: dueDate || undefined,
         priority,
         labelIds: Array.from(labelIds),
@@ -72,6 +81,7 @@ export function NewTaskDialog({
       setDescription("");
       setDueDate("");
       setLabelIds(new Set());
+      setAssigneeIds(new Set());
       setOpen(false);
     } catch (err) {
       toast.error("No se pudo crear la tarea", {
@@ -133,27 +143,34 @@ export function NewTaskDialog({
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-2">
-              <Label>Asignado</Label>
-              <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col gap-2">
+            <Label>Asignado</Label>
+            <div className="flex flex-wrap gap-2">
+              {profiles.length === 0 && (
+                <p className="text-muted-foreground text-sm">No hay usuarios en el CRM.</p>
+              )}
+              {profiles.map((p) => {
+                const active = assigneeIds.has(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => toggleAssignee(p.id)}
+                    className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input bg-transparent text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {p.nombre}
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex flex-col gap-2">
-              <Label>Fecha límite</Label>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Fecha límite</Label>
+            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full" />
           </div>
           <div className="flex flex-col gap-2">
             <Label>Etiquetas</Label>

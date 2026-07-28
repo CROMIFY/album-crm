@@ -7,6 +7,7 @@ import {
   SESSION_STARTED_COOKIE,
   LAST_ACTIVITY_COOKIE,
   evaluateSession,
+  bypassesUserSession,
 } from "@/lib/supabase/session-policy";
 
 const PUBLIC_PATHS = ["/login"];
@@ -27,6 +28,10 @@ function loginRedirect(request: NextRequest, carryCookiesFrom: NextResponse, exp
 }
 
 export async function updateSession(request: NextRequest) {
+  if (bypassesUserSession(request.nextUrl.pathname)) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
