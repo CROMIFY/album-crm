@@ -62,13 +62,13 @@ export async function fetchFunnelDashboard(tipo: AccountType) {
 
   const stageCounts: Record<DealStage, number> = {
     busqueda: 0,
-    cualificar: 0,
     cadencia: 0,
     contacto: 0,
     agendada: 0,
     demo: 0,
     negociacion: 0,
     ganado: 0,
+    aplazado: 0,
     perdido: 0,
   };
   for (const d of deals ?? []) {

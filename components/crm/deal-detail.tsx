@@ -60,7 +60,8 @@ export function DealDetail({
 }) {
   const [, startTransition] = useTransition();
   const tipo: AccountType = deal.account.tipo;
-  const isClosed = deal.stage === "ganado" || deal.stage === "perdido";
+  const isClosed =
+    deal.stage === "ganado" || deal.stage === "perdido" || deal.stage === "aplazado";
 
   function handleStageChange(stage: string) {
     startTransition(async () => {
@@ -143,10 +144,18 @@ export function DealDetail({
         </Card>
       </div>
 
-      {deal.stage === "perdido" && deal.lost_reason && (
-        <Card className="border-destructive/40">
+      {(deal.stage === "perdido" || deal.stage === "aplazado") && deal.lost_reason && (
+        <Card className={deal.stage === "perdido" ? "border-destructive/40" : undefined}>
           <CardHeader>
-            <CardTitle className="text-destructive text-sm font-medium">Motivo de pérdida</CardTitle>
+            <CardTitle
+              className={
+                deal.stage === "perdido"
+                  ? "text-destructive text-sm font-medium"
+                  : "text-sm font-medium"
+              }
+            >
+              {deal.stage === "perdido" ? "Motivo de pérdida" : "Nota de aplazamiento"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm">{deal.lost_reason}</CardContent>
         </Card>
@@ -225,6 +234,19 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
     }
   }
 
+  async function markPostponed() {
+    setLoading(true);
+    try {
+      await updateDealOutcome(dealId, tipo, "aplazado", reason);
+      toast.success("Negocio marcado como aplazado");
+      setOpen(false);
+    } catch (err) {
+      toast.error("Error", { description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -240,9 +262,12 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
           </Button>
           <Separator />
           <div className="flex flex-col gap-2">
-            <Label>Motivo (si se pierde)</Label>
+            <Label>Motivo (si se pierde o se aplaza)</Label>
             <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
           </div>
+          <Button onClick={markPostponed} disabled={loading} variant="secondary">
+            Aplazar (otro año)
+          </Button>
         </div>
         <DialogFooter>
           <Button onClick={markLost} disabled={loading} variant="destructive">

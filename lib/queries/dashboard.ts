@@ -4,7 +4,8 @@ import type { DealStage } from "@/lib/types";
 
 function activeCount(stageCounts: Record<DealStage, number>) {
   return Object.entries(stageCounts).reduce(
-    (sum, [stage, count]) => (stage === "ganado" || stage === "perdido" ? sum : sum + count),
+    (sum, [stage, count]) =>
+      stage === "ganado" || stage === "perdido" || stage === "aplazado" ? sum : sum + count,
     0
   );
 }

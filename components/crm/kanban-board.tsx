@@ -11,21 +11,21 @@ import type { AccountType, DealStage, DealWithRelations } from "@/lib/types";
 const PHASES = [
   {
     name: "Generar Leads",
-    span: 2,
+    span: 1,
     color: "var(--chart-2)",
-    description: "Búsqueda + Cualificación",
+    description: "Búsqueda",
   },
   {
     name: "Prospección",
     span: 4,
     color: "var(--chart-5)",
-    description: "Cadencia + Contacto + Agendada + Demo",
+    description: "Cadencia + Contacto + Agendada + Presentación",
   },
   {
     name: "Cierre",
-    span: 3,
+    span: 4,
     color: "var(--chart-3)",
-    description: "Negociación → Ganado o Perdido",
+    description: "Acuerdo y condiciones → Ganado, Aplazado o Perdido",
   },
 ];
 

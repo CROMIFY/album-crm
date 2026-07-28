@@ -73,49 +73,48 @@ export const PROVINCIAS_ESPANA: string[] = [
 
 export type DealStage =
   | "busqueda"
-  | "cualificar"
   | "cadencia"
   | "contacto"
   | "agendada"
   | "demo"
   | "negociacion"
   | "ganado"
+  | "aplazado"
   | "perdido";
 
 export const DEAL_STAGES: DealStage[] = [
   "busqueda",
-  "cualificar",
   "cadencia",
   "contacto",
   "agendada",
   "demo",
   "negociacion",
   "ganado",
+  "aplazado",
   "perdido",
 ];
 
 export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
   busqueda: "Búsqueda",
-  cualificar: "Cualificar",
   cadencia: "Cadencia",
   contacto: "Contacto",
   agendada: "Agendada",
-  demo: "Demo",
-  negociacion: "Negociación",
+  demo: "Presentación",
+  negociacion: "Acuerdo y condiciones",
   ganado: "Ganado",
+  aplazado: "Aplazado",
   perdido: "Perdido",
 };
 
 export const DEAL_STAGE_DESCRIPTIONS: Record<DealStage, string> = {
-  busqueda: "Se buscan posibles clientes.",
-  cualificar: "Segmentar los leads y añadir todos los datos necesarios para operar.",
+  busqueda: "Se buscan posibles clientes y se recopilan los datos necesarios para operar.",
   cadencia: "Intentos de contacto hasta que conseguimos ese contacto o se acaba la secuencia.",
   contacto: "Fase en la que hablamos para agendar reunión.",
-  agendada: "Reunión de presentación en la que hablamos del problema y se agenda demo.",
-  demo: "Se muestra cómo nuestra solución resuelve sus problemas.",
-  negociacion:
-    "Se justifica el precio en base al problema y el ahorro que obtendría el cliente, para luego dar un precio.",
+  agendada: "Reunión de presentación en la que hablamos del problema y se agenda la propuesta.",
+  demo: "Se presenta la propuesta y cómo encaja con sus necesidades.",
+  negociacion: "Se acuerdan las condiciones (comisión, exclusividad, alcance) antes de cerrar.",
   ganado: "Cliente cerrado.",
+  aplazado: "No es el momento, pero quiere retomarlo la próxima temporada.",
   perdido: "El negocio no salió adelante.",
 };
 

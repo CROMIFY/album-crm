@@ -32,6 +32,7 @@ export function DashboardCharts({
   const outcomeData = [
     { name: "Ganado", value: stageCounts.ganado ?? 0 },
     { name: "Perdido", value: stageCounts.perdido ?? 0 },
+    { name: "Aplazado", value: stageCounts.aplazado ?? 0 },
   ];
 
   const exitData = Object.entries(exitStageCounts).map(([stage, count]) => ({
@@ -84,7 +85,7 @@ export function DashboardCharts({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Ganados vs. perdidos</CardTitle>
+          <CardTitle className="text-sm font-medium">Ganados, perdidos y aplazados</CardTitle>
         </CardHeader>
         <CardContent className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -92,7 +93,10 @@ export function DashboardCharts({
               <Tooltip />
               <Pie data={outcomeData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80}>
                 {outcomeData.map((_, i) => (
-                  <Cell key={i} fill={i === 0 ? "var(--chart-1)" : "var(--chart-4)"} />
+                  <Cell
+                    key={i}
+                    fill={["var(--chart-1)", "var(--chart-4)", "var(--chart-5)"][i]}
+                  />
                 ))}
               </Pie>
             </PieChart>

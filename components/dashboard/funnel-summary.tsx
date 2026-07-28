@@ -5,7 +5,6 @@ import { DEAL_STAGE_LABELS, type DealStage } from "@/lib/types";
 
 const PIPELINE_STAGES: DealStage[] = [
   "busqueda",
-  "cualificar",
   "cadencia",
   "contacto",
   "agendada",

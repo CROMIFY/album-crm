@@ -138,13 +138,13 @@ export async function updateDealStage(dealId: string, tipo: AccountType, stage: 
 export async function updateDealOutcome(
   dealId: string,
   tipo: AccountType,
-  stage: "ganado" | "perdido",
+  stage: "ganado" | "perdido" | "aplazado",
   lostReason?: string
 ) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("deals")
-    .update({ stage, lost_reason: stage === "perdido" ? lostReason ?? null : null })
+    .update({ stage, lost_reason: stage !== "ganado" ? lostReason ?? null : null })
     .eq("id", dealId);
   if (error) throw new Error(error.message);
   revalidatePath(funnelPath(tipo));
