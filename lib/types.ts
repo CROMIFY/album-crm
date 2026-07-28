@@ -268,6 +268,74 @@ export type NotificationLogRow = {
   created_at: string;
 };
 
+export type MeetingStatus = "programada" | "completada" | "cancelada" | "no_show";
+
+export const MEETING_STATUS_LABELS: Record<MeetingStatus, string> = {
+  programada: "Programada",
+  completada: "Completada",
+  cancelada: "Cancelada",
+  no_show: "No show",
+};
+
+export type MeetingRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  starts_at: string;
+  ends_at: string;
+  location: string | null;
+  meet_link: string | null;
+  google_calendar_event_id: string | null;
+  status: MeetingStatus;
+  cancel_reason: string | null;
+  linked_account_id: string | null;
+  linked_contact_id: string | null;
+  linked_deal_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MeetingAttendeeRow = {
+  id: string;
+  meeting_id: string;
+  profile_id: string | null;
+  contact_id: string | null;
+  created_at: string;
+};
+
+export type MeetingNoteRow = {
+  id: string;
+  meeting_id: string;
+  author_id: string | null;
+  content: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MeetingActionItemRow = {
+  id: string;
+  meeting_id: string;
+  title: string;
+  done: boolean;
+  assignee_id: string | null;
+  due_date: string | null;
+  linked_task_id: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GoogleCalendarTokenRow = {
+  profile_id: string;
+  access_token: string;
+  refresh_token: string;
+  scope: string;
+  token_expiry: string;
+  created_at: string;
+  updated_at: string;
+};
+
 // Vistas "con relaciones" para selects con embedding de Supabase. El cliente
 // tipado no conoce las foreign keys reales (no generamos tipos desde un
 // proyecto Supabase vivo), así que estas queries se castean explícitamente a
@@ -281,6 +349,18 @@ export type TaskWithRelations = TaskRow & {
   labels: LabelRow[];
   subtasks: SubtaskRow[];
   assignees: ProfileRow[];
+};
+
+export type MeetingWithRelations = MeetingRow & {
+  account: AccountRow | null;
+  contact: ContactRow | null;
+  deal: DealRow | null;
+  attendees: (MeetingAttendeeRow & {
+    profile: ProfileRow | null;
+    contact: ContactRow | null;
+  })[];
+  notes: MeetingNoteRow[];
+  actionItems: MeetingActionItemRow[];
 };
 
 type Insertable<R, Optional extends keyof R = never> = Omit<
@@ -299,6 +379,7 @@ export type Database = {
       task_priority: TaskPriority;
       sponsor_scope: SponsorScope;
       sponsor_level: SponsorLevel;
+      meeting_status: MeetingStatus;
     };
     Tables: {
       profiles: Table<ProfileRow, Insertable<ProfileRow, "rol">, Partial<ProfileRow>>;
@@ -368,6 +449,46 @@ export type Database = {
         NotificationLogRow,
         Insertable<NotificationLogRow, "channel" | "target" | "payload" | "status">,
         Partial<NotificationLogRow>
+      >;
+      meetings: Table<
+        MeetingRow,
+        Insertable<
+          MeetingRow,
+          | "description"
+          | "location"
+          | "meet_link"
+          | "google_calendar_event_id"
+          | "status"
+          | "cancel_reason"
+          | "linked_account_id"
+          | "linked_contact_id"
+          | "linked_deal_id"
+          | "created_by"
+        >,
+        Partial<MeetingRow>
+      >;
+      meeting_attendees: Table<
+        MeetingAttendeeRow,
+        Insertable<MeetingAttendeeRow, "profile_id" | "contact_id">,
+        Partial<MeetingAttendeeRow>
+      >;
+      meeting_notes: Table<
+        MeetingNoteRow,
+        Insertable<MeetingNoteRow, "author_id">,
+        Partial<MeetingNoteRow>
+      >;
+      meeting_action_items: Table<
+        MeetingActionItemRow,
+        Insertable<
+          MeetingActionItemRow,
+          "done" | "assignee_id" | "due_date" | "linked_task_id" | "position"
+        >,
+        Partial<MeetingActionItemRow>
+      >;
+      google_calendar_tokens: Table<
+        GoogleCalendarTokenRow,
+        Insertable<GoogleCalendarTokenRow>,
+        Partial<GoogleCalendarTokenRow>
       >;
     };
   };

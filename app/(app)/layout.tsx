@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
 import { UserMenu } from "@/components/user-menu";
 import { ModeToggle } from "@/components/mode-toggle";
+import { GoogleCalendarStatusToast } from "@/components/google-calendar-status-toast";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -16,11 +18,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("nombre")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, { count: googleTokenCount }] = await Promise.all([
+    supabase.from("profiles").select("nombre").eq("id", user.id).single(),
+    supabase
+      .from("google_calendar_tokens")
+      .select("profile_id", { count: "exact", head: true })
+      .eq("profile_id", user.id),
+  ]);
 
   return (
     <SidebarProvider>
@@ -34,11 +38,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-2">
             <div id="header-actions" className="flex items-center gap-2" />
             <ModeToggle />
-            <UserMenu nombre={profile?.nombre ?? user.email ?? "Usuario"} email={user.email ?? ""} />
+            <UserMenu
+              nombre={profile?.nombre ?? user.email ?? "Usuario"}
+              email={user.email ?? ""}
+              googleCalendarConnected={(googleTokenCount ?? 0) > 0}
+            />
           </div>
         </header>
         <main className="flex min-w-0 flex-1 flex-col">{children}</main>
       </SidebarInset>
+      <Suspense fallback={null}>
+        <GoogleCalendarStatusToast />
+      </Suspense>
     </SidebarProvider>
   );
 }

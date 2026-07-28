@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Pencil } from "lucide-react";
+import { LogOut, Pencil, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -25,7 +25,15 @@ import {
 import { signOut } from "@/lib/actions/auth";
 import { updateOwnProfileName } from "@/lib/actions/profile";
 
-export function UserMenu({ nombre, email }: { nombre: string; email: string }) {
+export function UserMenu({
+  nombre,
+  email,
+  googleCalendarConnected,
+}: {
+  nombre: string;
+  email: string;
+  googleCalendarConnected: boolean;
+}) {
   const [editOpen, setEditOpen] = useState(false);
   const initials = nombre
     .split(" ")
@@ -53,6 +61,12 @@ export function UserMenu({ nombre, email }: { nombre: string; email: string }) {
           <DropdownMenuItem onSelect={() => setEditOpen(true)}>
             <Pencil />
             Editar nombre
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/api/auth/google/start">
+              <CalendarClock />
+              {googleCalendarConnected ? "Reconectar Google Calendar" : "Conectar Google Calendar"}
+            </a>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <form action={signOut}>

@@ -85,6 +85,94 @@ export function taskAssignedEmail({
   return { subject, html };
 }
 
+export function meetingScheduledEmail({
+  attendeeName,
+  meetingTitle,
+  startsAt,
+  meetLink,
+  location,
+}: {
+  attendeeName: string;
+  meetingTitle: string;
+  startsAt: string;
+  meetLink: string | null;
+  location: string | null;
+}) {
+  const subject = `Invitación: ${meetingTitle}`;
+  const when = new Date(startsAt).toLocaleString("es-ES");
+  const locationLine = location
+    ? `<p style="margin:4px 0;"><strong>Ubicación:</strong> ${escapeHtml(location)}</p>`
+    : "";
+
+  const html = baseLayout(
+    subject,
+    `
+      <p style="margin:0 0 12px;">Hola ${escapeHtml(attendeeName)},</p>
+      <p style="margin:0 0 16px;">Te han invitado a una reunión:</p>
+      <div style="padding:14px 16px;background-color:#f4f4f5;border-radius:8px;">
+        <p style="margin:0 0 6px;font-weight:600;">${escapeHtml(meetingTitle)}</p>
+        <p style="margin:4px 0;"><strong>Cuándo:</strong> ${when}</p>
+        ${locationLine}
+      </div>
+      ${meetLink ? button(meetLink, "Unirse con Google Meet") : ""}
+    `
+  );
+
+  return { subject, html };
+}
+
+// Recordatorio del día: el cron corre una vez al día (plan Hobby de Vercel no
+// permite cron más frecuente), así que en vez de "30 min antes" se avisa por
+// la mañana de las reuniones que tocan hoy.
+export function meetingTodayEmail({
+  attendeeName,
+  meetingTitle,
+  startsAt,
+  meetLink,
+}: {
+  attendeeName: string;
+  meetingTitle: string;
+  startsAt: string;
+  meetLink: string | null;
+}) {
+  const subject = `Hoy: "${meetingTitle}"`;
+  const when = new Date(startsAt).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+  const html = baseLayout(
+    subject,
+    `
+      <p style="margin:0 0 12px;">Hola ${escapeHtml(attendeeName)},</p>
+      <p style="margin:0 0 16px;">Hoy tienes <strong>${escapeHtml(meetingTitle)}</strong> a las ${when}.</p>
+      ${meetLink ? button(meetLink, "Unirse con Google Meet") : ""}
+    `
+  );
+
+  return { subject, html };
+}
+
+export function meetingNotesReminderEmail({
+  attendeeName,
+  meetingTitle,
+  meetingId,
+}: {
+  attendeeName: string;
+  meetingTitle: string;
+  meetingId: string;
+}) {
+  const subject = `Rellena las notas de "${meetingTitle}"`;
+
+  const html = baseLayout(
+    subject,
+    `
+      <p style="margin:0 0 12px;">Hola ${escapeHtml(attendeeName)},</p>
+      <p style="margin:0 0 16px;">La reunión <strong>${escapeHtml(meetingTitle)}</strong> ya ha terminado y todavía no tiene notas registradas.</p>
+      ${button(`${APP_URL}/crm/reuniones/${meetingId}`, "Añadir notas")}
+    `
+  );
+
+  return { subject, html };
+}
+
 export function taskDueReminderEmail({
   assigneeName,
   taskTitle,

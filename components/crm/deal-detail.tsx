@@ -36,6 +36,8 @@ import {
   deleteCadenceStep,
 } from "@/lib/actions/deals";
 import { EditAccountDialog } from "@/components/crm/edit-account-dialog";
+import { NewMeetingDialog } from "@/components/crm/new-meeting-dialog";
+import Link from "next/link";
 import {
   DEAL_STAGES,
   DEAL_STAGE_LABELS,
@@ -43,22 +45,29 @@ import {
   SPONSOR_SCOPE_LABELS,
   SPONSOR_LEVEL_LABELS,
   ACCOUNT_TYPE_LABELS,
+  MEETING_STATUS_LABELS,
 } from "@/lib/types";
 import type {
   AccountType,
   CadenceStepRow,
   DealStageHistoryRow,
   DealWithRelations,
+  MeetingWithRelations,
+  ProfileRow,
 } from "@/lib/types";
 
 export function DealDetail({
   deal,
   history,
   cadence,
+  meetings,
+  profiles,
 }: {
   deal: DealWithRelations;
   history: DealStageHistoryRow[];
   cadence: CadenceStepRow[];
+  meetings: MeetingWithRelations[];
+  profiles: ProfileRow[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -176,6 +185,8 @@ export function DealDetail({
       )}
 
       <CadenceCard dealId={deal.id} steps={cadence} />
+
+      <MeetingsCard deal={deal} meetings={meetings} profiles={profiles} />
 
       <Card>
         <CardHeader>
@@ -369,5 +380,76 @@ function CadenceCard({ dealId, steps }: { dealId: string; steps: CadenceStepRow[
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function MeetingsCard({
+  deal,
+  meetings,
+  profiles,
+}: {
+  deal: DealWithRelations;
+  meetings: MeetingWithRelations[];
+  profiles: ProfileRow[];
+}) {
+  const upcoming = meetings.filter((m) => new Date(m.starts_at) >= new Date());
+  const past = meetings.filter((m) => new Date(m.starts_at) < new Date());
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-medium">Reuniones</CardTitle>
+        <NewMeetingDialog
+          accounts={[deal.account]}
+          contacts={deal.contact ? [deal.contact] : []}
+          deals={[deal]}
+          profiles={profiles}
+          defaultAccountId={deal.account.id}
+          defaultContactId={deal.contact?.id}
+          defaultDealId={deal.id}
+        />
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {meetings.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Sin reuniones todavía.</p>
+        ) : (
+          <>
+            {upcoming.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-muted-foreground text-xs font-medium">Próximas</p>
+                {upcoming.map((m) => (
+                  <MeetingRow key={m.id} meeting={m} />
+                ))}
+              </div>
+            )}
+            {past.length > 0 && (
+              <div className="flex flex-col gap-1.5 border-t pt-3">
+                <p className="text-muted-foreground text-xs font-medium">Histórico</p>
+                {past.map((m) => (
+                  <MeetingRow key={m.id} meeting={m} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MeetingRow({ meeting }: { meeting: MeetingWithRelations }) {
+  return (
+    <Link
+      href={`/crm/reuniones/${meeting.id}`}
+      className="hover:bg-muted flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm"
+    >
+      <div>
+        <p className="font-medium">{meeting.title}</p>
+        <p className="text-muted-foreground text-xs">
+          {new Date(meeting.starts_at).toLocaleString("es-ES")}
+        </p>
+      </div>
+      <Badge variant="secondary">{MEETING_STATUS_LABELS[meeting.status]}</Badge>
+    </Link>
   );
 }
