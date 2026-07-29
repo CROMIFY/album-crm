@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const GOOGLE_SCOPES = ["https://www.googleapis.com/auth/calendar.events"];
 
 function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_APP_URL ?? "https://album-crm.vercel.app";
 }
 
 function oauthClient() {
