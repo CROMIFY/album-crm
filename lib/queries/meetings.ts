@@ -93,6 +93,26 @@ export async function getPastMeetings(
   return (data ?? []).map(normalizeMeeting);
 }
 
+export async function getMeetingsInRange(
+  range: { from: string; to: string } & MeetingFilters
+) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("meetings")
+    .select(MEETING_SELECT)
+    .gte("starts_at", range.from)
+    .lte("starts_at", range.to)
+    .order("starts_at", { ascending: true });
+
+  if (range.accountId) query = query.eq("linked_account_id", range.accountId);
+  if (range.status) query = query.eq("status", range.status);
+  if (range.profileId) query = await applyProfileFilter(supabase, query, range.profileId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(normalizeMeeting);
+}
+
 export async function getMeetingsByAccount(accountId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

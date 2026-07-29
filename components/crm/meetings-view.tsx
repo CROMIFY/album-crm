@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { HeaderPortal } from "@/components/header-portal";
 import { NewMeetingDialog } from "@/components/crm/new-meeting-dialog";
+import { MeetingsCalendar } from "@/components/crm/meetings-calendar";
 import { MEETING_STATUS_LABELS } from "@/lib/types";
 import type {
   AccountRow,
@@ -34,6 +35,8 @@ const STATUS_VARIANT: Record<MeetingStatus, "default" | "secondary" | "destructi
 export function MeetingsView({
   upcoming,
   past,
+  calendarMeetings,
+  currentMonth,
   profiles,
   accounts,
   contacts,
@@ -42,6 +45,8 @@ export function MeetingsView({
 }: {
   upcoming: MeetingWithRelations[];
   past: MeetingWithRelations[];
+  calendarMeetings: MeetingWithRelations[];
+  currentMonth: string;
   profiles: ProfileRow[];
   accounts: AccountRow[];
   contacts: ContactRow[];
@@ -112,12 +117,16 @@ export function MeetingsView({
         <TabsList>
           <TabsTrigger value="proximas">Próximas</TabsTrigger>
           <TabsTrigger value="pasadas">Pasadas</TabsTrigger>
+          <TabsTrigger value="calendario">Calendario</TabsTrigger>
         </TabsList>
         <TabsContent value="proximas" className="pt-3">
           <MeetingList meetings={upcoming} emptyLabel="No hay reuniones próximas." />
         </TabsContent>
         <TabsContent value="pasadas" className="pt-3">
           <MeetingList meetings={past} emptyLabel="No hay reuniones pasadas." />
+        </TabsContent>
+        <TabsContent value="calendario" className="pt-3">
+          <MeetingsCalendar meetings={calendarMeetings} currentMonth={currentMonth} />
         </TabsContent>
       </Tabs>
     </div>
