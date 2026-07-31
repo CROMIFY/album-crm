@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, use, useState } from "react";
 import { LogOut, Pencil, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,11 +28,11 @@ import { updateOwnProfileName } from "@/lib/actions/profile";
 export function UserMenu({
   nombre,
   email,
-  googleCalendarConnected,
+  googleCalendarConnectedPromise,
 }: {
   nombre: string;
   email: string;
-  googleCalendarConnected: boolean;
+  googleCalendarConnectedPromise: Promise<boolean>;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const initials = nombre
@@ -62,12 +62,18 @@ export function UserMenu({
             <Pencil />
             Editar nombre
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <a href="/api/auth/google/start">
-              <CalendarClock />
-              {googleCalendarConnected ? "Reconectar Google Calendar" : "Conectar Google Calendar"}
-            </a>
-          </DropdownMenuItem>
+          <Suspense
+            fallback={
+              <DropdownMenuItem asChild>
+                <a href="/api/auth/google/start">
+                  <CalendarClock />
+                  Conectar Google Calendar
+                </a>
+              </DropdownMenuItem>
+            }
+          >
+            <GoogleCalendarMenuItem connectedPromise={googleCalendarConnectedPromise} />
+          </Suspense>
           <DropdownMenuSeparator />
           <form action={signOut}>
             <DropdownMenuItem asChild>
@@ -81,6 +87,18 @@ export function UserMenu({
       </DropdownMenu>
       <EditNameDialog open={editOpen} onOpenChange={setEditOpen} currentName={nombre} />
     </>
+  );
+}
+
+function GoogleCalendarMenuItem({ connectedPromise }: { connectedPromise: Promise<boolean> }) {
+  const connected = use(connectedPromise);
+  return (
+    <DropdownMenuItem asChild>
+      <a href="/api/auth/google/start">
+        <CalendarClock />
+        {connected ? "Reconectar Google Calendar" : "Conectar Google Calendar"}
+      </a>
+    </DropdownMenuItem>
   );
 }
 

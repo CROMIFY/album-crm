@@ -18,13 +18,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/login");
   }
 
-  const [{ data: profile }, { count: googleTokenCount }] = await Promise.all([
-    supabase.from("profiles").select("nombre").eq("id", user.id).single(),
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("nombre")
+    .eq("id", user.id)
+    .single();
+
+  // Sin await a propósito: esto no debe bloquear el layout (que se vuelve a
+  // ejecutar en cada navegación entre módulos) solo para saber si hay que
+  // mostrar "Conectar" o "Reconectar" Google Calendar en el menú de usuario.
+  // UserMenu la resuelve con `use()` dentro de su propio <Suspense>.
+  const googleCalendarConnectedPromise = Promise.resolve(
     supabase
       .from("google_calendar_tokens")
       .select("profile_id", { count: "exact", head: true })
-      .eq("profile_id", user.id),
-  ]);
+      .eq("profile_id", user.id)
+  ).then(({ count }) => (count ?? 0) > 0);
 
   return (
     <SidebarProvider>
@@ -41,7 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <UserMenu
               nombre={profile?.nombre ?? user.email ?? "Usuario"}
               email={user.email ?? ""}
-              googleCalendarConnected={(googleTokenCount ?? 0) > 0}
+              googleCalendarConnectedPromise={googleCalendarConnectedPromise}
             />
           </div>
         </header>
