@@ -52,7 +52,7 @@ import type {
   CadenceStepRow,
   DealStageHistoryRow,
   DealWithRelations,
-  MeetingWithRelations,
+  MeetingListItem,
   ProfileRow,
 } from "@/lib/types";
 
@@ -66,7 +66,7 @@ export function DealDetail({
   deal: DealWithRelations;
   history: DealStageHistoryRow[];
   cadence: CadenceStepRow[];
-  meetings: MeetingWithRelations[];
+  meetings: MeetingListItem[];
   profiles: ProfileRow[];
 }) {
   const router = useRouter();
@@ -389,7 +389,7 @@ function MeetingsCard({
   profiles,
 }: {
   deal: DealWithRelations;
-  meetings: MeetingWithRelations[];
+  meetings: MeetingListItem[];
   profiles: ProfileRow[];
 }) {
   const upcoming = meetings.filter((m) => new Date(m.starts_at) >= new Date());
@@ -437,7 +437,7 @@ function MeetingsCard({
   );
 }
 
-function MeetingRow({ meeting }: { meeting: MeetingWithRelations }) {
+function MeetingRow({ meeting }: { meeting: MeetingListItem }) {
   return (
     <Link
       href={`/crm/reuniones/${meeting.id}`}

@@ -19,7 +19,7 @@ import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { MeetingStatus, MeetingWithRelations } from "@/lib/types";
+import type { MeetingListItem, MeetingStatus } from "@/lib/types";
 
 const STATUS_VARIANT: Record<MeetingStatus, "default" | "secondary" | "destructive" | "outline"> = {
   programada: "default",
@@ -35,7 +35,7 @@ export function MeetingsCalendar({
   meetings,
   currentMonth,
 }: {
-  meetings: MeetingWithRelations[];
+  meetings: MeetingListItem[];
   currentMonth: string;
 }) {
   const router = useRouter();

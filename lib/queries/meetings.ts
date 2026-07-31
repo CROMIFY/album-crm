@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import type { MeetingStatus, MeetingWithRelations } from "@/lib/types";
+import type { MeetingListItem, MeetingStatus, MeetingWithRelations } from "@/lib/types";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 // Embebe cuenta/contacto/deal enlazados, asistentes (con su perfil o contacto
 // externo), notas y action items. Ver nota de casteo en lib/queries/crm.ts:
 // nuestro Database no modela relaciones/embeds, pero el embed es válido
-// contra las FKs reales de la base de datos.
+// contra las FKs reales de la base de datos. Solo se usa para el detalle de
+// una reunión — es un select pesado, no apto para listados.
 const MEETING_SELECT = `
   *,
   account:accounts(*),
@@ -16,6 +17,11 @@ const MEETING_SELECT = `
   notes:meeting_notes(*),
   actionItems:meeting_action_items(*)
 `;
+
+// Select ligero para listados (Próximas/Pasadas/Calendario/ficha de cuenta):
+// esas vistas solo pintan título, fecha, estado y el nombre de la cuenta, así
+// que no hace falta traer notas/action items/asistentes de cada reunión.
+const MEETING_LIST_SELECT = "id, title, starts_at, ends_at, status, account:accounts(id,nombre)";
 
 function normalizeMeeting(raw: unknown): MeetingWithRelations {
   const meeting = raw as MeetingWithRelations;
@@ -58,7 +64,7 @@ export async function getUpcomingMeetings(filters: MeetingFilters = {}) {
   const supabase = await createClient();
   let query = supabase
     .from("meetings")
-    .select(MEETING_SELECT)
+    .select(MEETING_LIST_SELECT)
     .gte("starts_at", new Date().toISOString())
     .neq("status", "cancelada")
     .order("starts_at", { ascending: true });
@@ -69,7 +75,7 @@ export async function getUpcomingMeetings(filters: MeetingFilters = {}) {
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data ?? []).map(normalizeMeeting);
+  return (data ?? []) as unknown as MeetingListItem[];
 }
 
 export async function getPastMeetings(
@@ -78,7 +84,7 @@ export async function getPastMeetings(
   const supabase = await createClient();
   let query = supabase
     .from("meetings")
-    .select(MEETING_SELECT)
+    .select(MEETING_LIST_SELECT)
     .lt("starts_at", new Date().toISOString())
     .order("starts_at", { ascending: false });
 
@@ -90,7 +96,7 @@ export async function getPastMeetings(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data ?? []).map(normalizeMeeting);
+  return (data ?? []) as unknown as MeetingListItem[];
 }
 
 export async function getMeetingsInRange(
@@ -99,7 +105,7 @@ export async function getMeetingsInRange(
   const supabase = await createClient();
   let query = supabase
     .from("meetings")
-    .select(MEETING_SELECT)
+    .select(MEETING_LIST_SELECT)
     .gte("starts_at", range.from)
     .lte("starts_at", range.to)
     .order("starts_at", { ascending: true });
@@ -110,19 +116,19 @@ export async function getMeetingsInRange(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data ?? []).map(normalizeMeeting);
+  return (data ?? []) as unknown as MeetingListItem[];
 }
 
 export async function getMeetingsByAccount(accountId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("meetings")
-    .select(MEETING_SELECT)
+    .select(MEETING_LIST_SELECT)
     .eq("linked_account_id", accountId)
     .order("starts_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data ?? []).map(normalizeMeeting);
+  return (data ?? []) as unknown as MeetingListItem[];
 }
 
 export async function getMeetingById(id: string) {

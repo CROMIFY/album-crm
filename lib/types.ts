@@ -363,6 +363,13 @@ export type MeetingWithRelations = MeetingRow & {
   actionItems: MeetingActionItemRow[];
 };
 
+// Forma ligera para listados (Próximas/Pasadas/Calendario/ficha de cuenta):
+// evita traer notas, action items y asistentes completos cuando la UI solo
+// pinta título, fecha, estado y el nombre de la cuenta.
+export type MeetingListItem = Pick<MeetingRow, "id" | "title" | "starts_at" | "ends_at" | "status"> & {
+  account: Pick<AccountRow, "id" | "nombre"> | null;
+};
+
 type Insertable<R, Optional extends keyof R = never> = Omit<
   R,
   "id" | "created_at" | "updated_at" | Optional

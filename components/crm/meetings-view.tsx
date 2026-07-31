@@ -20,8 +20,8 @@ import type {
   AccountRow,
   ContactRow,
   DealRow,
+  MeetingListItem,
   MeetingStatus,
-  MeetingWithRelations,
   ProfileRow,
 } from "@/lib/types";
 
@@ -43,9 +43,9 @@ export function MeetingsView({
   deals,
   filters,
 }: {
-  upcoming: MeetingWithRelations[];
-  past: MeetingWithRelations[];
-  calendarMeetings: MeetingWithRelations[];
+  upcoming: MeetingListItem[];
+  past: MeetingListItem[];
+  calendarMeetings: MeetingListItem[];
   currentMonth: string;
   profiles: ProfileRow[];
   accounts: AccountRow[];
@@ -113,20 +113,20 @@ export function MeetingsView({
         </Select>
       </div>
 
-      <Tabs defaultValue="proximas">
+      <Tabs defaultValue="calendario">
         <TabsList>
+          <TabsTrigger value="calendario">Calendario</TabsTrigger>
           <TabsTrigger value="proximas">Próximas</TabsTrigger>
           <TabsTrigger value="pasadas">Pasadas</TabsTrigger>
-          <TabsTrigger value="calendario">Calendario</TabsTrigger>
         </TabsList>
+        <TabsContent value="calendario" className="pt-3">
+          <MeetingsCalendar meetings={calendarMeetings} currentMonth={currentMonth} />
+        </TabsContent>
         <TabsContent value="proximas" className="pt-3">
           <MeetingList meetings={upcoming} emptyLabel="No hay reuniones próximas." />
         </TabsContent>
         <TabsContent value="pasadas" className="pt-3">
           <MeetingList meetings={past} emptyLabel="No hay reuniones pasadas." />
-        </TabsContent>
-        <TabsContent value="calendario" className="pt-3">
-          <MeetingsCalendar meetings={calendarMeetings} currentMonth={currentMonth} />
         </TabsContent>
       </Tabs>
     </div>
@@ -137,7 +137,7 @@ function MeetingList({
   meetings,
   emptyLabel,
 }: {
-  meetings: MeetingWithRelations[];
+  meetings: MeetingListItem[];
   emptyLabel: string;
 }) {
   if (meetings.length === 0) {
