@@ -5,7 +5,7 @@ import type { DealStage } from "@/lib/types";
 function activeCount(stageCounts: Record<DealStage, number>) {
   return Object.entries(stageCounts).reduce(
     (sum, [stage, count]) =>
-      stage === "ganado" || stage === "perdido" || stage === "aplazado" ? sum : sum + count,
+      stage === "cerrado" || stage === "rechazado" || stage === "otro_anio" ? sum : sum + count,
     0
   );
 }
@@ -23,7 +23,7 @@ export async function fetchDashboardData() {
       supabase
         .from("deal_stage_history")
         .select("*", { count: "exact", head: true })
-        .eq("to_stage", "ganado")
+        .eq("to_stage", "cerrado")
         .gte("changed_at", startOfMonth),
       supabase
         .from("tasks")

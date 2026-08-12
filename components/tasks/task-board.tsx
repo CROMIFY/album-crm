@@ -2,6 +2,7 @@
 
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import { toast } from "sonner";
 import { TaskColumn } from "@/components/tasks/task-column";
 import { NewColumnButton } from "@/components/tasks/new-column-button";
@@ -9,8 +10,10 @@ import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { ManageLabelsDialog } from "@/components/tasks/manage-labels-dialog";
 import { TaskDetailSheet } from "@/components/tasks/task-detail-sheet";
 import { HeaderPortal } from "@/components/header-portal";
-import { updateTaskColumn } from "@/lib/actions/tasks";
+import { reorderTask } from "@/lib/actions/tasks";
 import type { AccountRow, BoardColumnRow, LabelRow, ProfileRow, TaskWithRelations } from "@/lib/types";
+
+type MoveAction = { taskId: string; columnId: string; orderedIds: string[] };
 
 export function TaskBoard({
   columns,
@@ -29,8 +32,14 @@ export function TaskBoard({
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [optimisticTasks, moveTask] = useOptimistic(
     tasks,
-    (state, { taskId, columnId }: { taskId: string; columnId: string }) =>
-      state.map((t) => (t.id === taskId ? { ...t, column_id: columnId } : t))
+    (state, { taskId, columnId, orderedIds }: MoveAction) => {
+      const positionById = new Map(orderedIds.map((id, position) => [id, position]));
+      return state.map((t) => {
+        if (t.id === taskId) return { ...t, column_id: columnId, position: positionById.get(t.id) ?? t.position };
+        if (positionById.has(t.id)) return { ...t, position: positionById.get(t.id)! };
+        return t;
+      });
+    }
   );
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -40,6 +49,9 @@ export function TaskBoard({
     for (const column of columns) map.set(column.id, []);
     for (const task of optimisticTasks) {
       map.get(task.column_id)?.push(task);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.position - b.position);
     }
     return map;
   }, [columns, optimisticTasks]);
@@ -59,15 +71,42 @@ export function TaskBoard({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
+
     const taskId = String(active.id);
-    const columnId = String(over.id);
-    const current = tasks.find((t) => t.id === taskId);
-    if (!current || current.column_id === columnId) return;
+    const current = optimisticTasks.find((t) => t.id === taskId);
+    if (!current) return;
+
+    const overIsTask = over.data.current?.type === "task";
+    const columnId = overIsTask ? (over.data.current?.columnId as string) : String(over.id);
+
+    const sourceColumnTasks = tasksByColumn.get(current.column_id) ?? [];
+    const targetColumnTasks = tasksByColumn.get(columnId) ?? [];
+
+    let orderedIds: string[];
+    if (current.column_id === columnId) {
+      const oldIndex = sourceColumnTasks.findIndex((t) => t.id === taskId);
+      const newIndex = overIsTask
+        ? sourceColumnTasks.findIndex((t) => t.id === String(over.id))
+        : sourceColumnTasks.length - 1;
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      orderedIds = arrayMove(sourceColumnTasks, oldIndex, newIndex).map((t) => t.id);
+    } else {
+      const withoutMoved = targetColumnTasks.filter((t) => t.id !== taskId);
+      const insertIndex = overIsTask
+        ? withoutMoved.findIndex((t) => t.id === String(over.id))
+        : withoutMoved.length;
+      const index = insertIndex === -1 ? withoutMoved.length : insertIndex;
+      orderedIds = [
+        ...withoutMoved.slice(0, index).map((t) => t.id),
+        taskId,
+        ...withoutMoved.slice(index).map((t) => t.id),
+      ];
+    }
 
     startTransition(async () => {
-      moveTask({ taskId, columnId });
+      moveTask({ taskId, columnId, orderedIds });
       try {
-        await updateTaskColumn(taskId, columnId);
+        await reorderTask(taskId, columnId, orderedIds);
       } catch (err) {
         toast.error("No se pudo mover la tarea", {
           description: err instanceof Error ? err.message : undefined,

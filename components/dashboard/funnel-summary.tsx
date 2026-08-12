@@ -3,14 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DEAL_STAGE_LABELS, type DealStage } from "@/lib/types";
 
-const PIPELINE_STAGES: DealStage[] = [
-  "busqueda",
-  "cadencia",
-  "contacto",
-  "agendada",
-  "demo",
-  "negociacion",
-];
+const PIPELINE_STAGES: DealStage[] = ["listado", "contactado", "pdte_firma"];
 
 export function FunnelSummary({
   title,

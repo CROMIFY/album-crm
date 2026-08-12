@@ -34,9 +34,9 @@ export function DashboardCharts({
   }));
 
   const outcomeData = [
-    { name: "Ganado", value: stageCounts.ganado ?? 0 },
-    { name: "Perdido", value: stageCounts.perdido ?? 0 },
-    { name: "Aplazado", value: stageCounts.aplazado ?? 0 },
+    { name: "Cerrado", value: stageCounts.cerrado ?? 0 },
+    { name: "Rechazado", value: stageCounts.rechazado ?? 0 },
+    { name: "Otro año", value: stageCounts.otro_anio ?? 0 },
   ];
 
   const exitData = Object.entries(exitStageCounts).map(([stage, count]) => ({
@@ -89,7 +89,7 @@ export function DashboardCharts({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Ganados, perdidos y aplazados</CardTitle>
+          <CardTitle className="text-sm font-medium">Cerrados, rechazados y otro año</CardTitle>
         </CardHeader>
         <CardContent className="h-64">
           <ResponsiveContainer width="100%" height="100%">

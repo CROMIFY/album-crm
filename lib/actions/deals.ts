@@ -127,7 +127,7 @@ export async function updateDealStage(dealId: string, tipo: AccountType, stage: 
   const { error } = await supabase.from("deals").update({ stage }).eq("id", dealId);
   if (error) throw new Error(error.message);
 
-  if (stage === "cadencia") {
+  if (stage === "listado") {
     await seedDefaultCadenceIfEmpty(supabase, dealId);
   }
 
@@ -138,13 +138,13 @@ export async function updateDealStage(dealId: string, tipo: AccountType, stage: 
 export async function updateDealOutcome(
   dealId: string,
   tipo: AccountType,
-  stage: "ganado" | "perdido" | "aplazado",
+  stage: "cerrado" | "rechazado" | "otro_anio",
   lostReason?: string
 ) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("deals")
-    .update({ stage, lost_reason: stage !== "ganado" ? lostReason ?? null : null })
+    .update({ stage, lost_reason: stage !== "cerrado" ? lostReason ?? null : null })
     .eq("id", dealId);
   if (error) throw new Error(error.message);
   revalidatePath(funnelPath(tipo));

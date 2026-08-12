@@ -61,15 +61,12 @@ export async function fetchFunnelDashboard(tipo: AccountType) {
   const deals = (rawDeals ?? []) as unknown as { id: string; stage: DealStage }[];
 
   const stageCounts: Record<DealStage, number> = {
-    busqueda: 0,
-    cadencia: 0,
-    contacto: 0,
-    agendada: 0,
-    demo: 0,
-    negociacion: 0,
-    ganado: 0,
-    aplazado: 0,
-    perdido: 0,
+    listado: 0,
+    contactado: 0,
+    pdte_firma: 0,
+    cerrado: 0,
+    rechazado: 0,
+    otro_anio: 0,
   };
   for (const d of deals ?? []) {
     stageCounts[d.stage as DealStage]++;
@@ -86,10 +83,10 @@ export async function fetchFunnelDashboard(tipo: AccountType) {
     : { data: [] };
 
   // Etapa de salida: última etapa (from_stage) antes de entrar en
-  // ganado/perdido/aplazado (los tres son salidas del funnel activo).
+  // cerrado/rechazado/otro_anio (los tres son salidas del funnel activo).
   const exitStageCounts: Record<string, number> = {};
   for (const row of history ?? []) {
-    if (row.to_stage === "ganado" || row.to_stage === "perdido" || row.to_stage === "aplazado") {
+    if (row.to_stage === "cerrado" || row.to_stage === "rechazado" || row.to_stage === "otro_anio") {
       const key = row.from_stage ?? "sin_etapa";
       exitStageCounts[key] = (exitStageCounts[key] ?? 0) + 1;
     }
@@ -105,7 +102,7 @@ export async function fetchFunnelDashboard(tipo: AccountType) {
   }
   const cadenceProgressCounts: Record<number, number> = {};
   for (const deal of deals ?? []) {
-    if (deal.stage !== "cadencia") continue;
+    if (deal.stage !== "listado") continue;
     const completed = doneByDeal.get(deal.id) ?? 0;
     cadenceProgressCounts[completed] = (cadenceProgressCounts[completed] ?? 0) + 1;
   }

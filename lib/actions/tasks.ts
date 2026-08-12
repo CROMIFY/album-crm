@@ -117,17 +117,19 @@ export async function createTask(input: {
   return task.id;
 }
 
-export async function updateTaskColumn(taskId: string, columnId: string) {
+// Mueve una tarea (opcionalmente a otra columna) y fija el orden manual del
+// resto de tareas de la columna de destino. orderedTaskIds es la lista
+// completa y ya reordenada de ids de esa columna (incluida la tarea movida),
+// tal y como debe quedar visualmente tras soltar el drag.
+export async function reorderTask(taskId: string, columnId: string, orderedTaskIds: string[]) {
   const supabase = await createClient();
-  const [{ count }, { data: column }] = await Promise.all([
-    supabase.from("tasks").select("*", { count: "exact", head: true }).eq("column_id", columnId),
-    supabase.from("board_columns").select("is_done_column").eq("id", columnId).single(),
-  ]);
+  const { data: column } = await supabase
+    .from("board_columns")
+    .select("is_done_column")
+    .eq("id", columnId)
+    .single();
 
-  const updates: { column_id: string; position: number; done?: boolean } = {
-    column_id: columnId,
-    position: count ?? 0,
-  };
+  const updates: { column_id: string; done?: boolean } = { column_id: columnId };
 
   // Mover una tarea a una columna marcada como "de hecho" (p.ej. "Done") la
   // completa sola, salvo que le queden subtareas pendientes — misma regla que
@@ -138,6 +140,13 @@ export async function updateTaskColumn(taskId: string, columnId: string) {
 
   const { error } = await supabase.from("tasks").update(updates).eq("id", taskId);
   if (error) throw new Error(error.message);
+
+  const positionUpdates = await Promise.all(
+    orderedTaskIds.map((id, position) => supabase.from("tasks").update({ position }).eq("id", id))
+  );
+  const positionError = positionUpdates.find((r) => r.error)?.error;
+  if (positionError) throw new Error(positionError.message);
+
   revalidatePath(BOARD_PATH);
 }
 

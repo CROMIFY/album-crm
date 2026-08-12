@@ -72,10 +72,10 @@ export function DealDetail({
   const router = useRouter();
   const [, startTransition] = useTransition();
   const tipo: AccountType = deal.account.tipo;
-  // "aplazado" no cuenta como cerrado: a diferencia de ganado/perdido, está
-  // pensado para retomarse más adelante, así que el selector de etapa y el
-  // diálogo de cierre deben seguir disponibles.
-  const isClosed = deal.stage === "ganado" || deal.stage === "perdido";
+  // "otro_anio" no cuenta como cerrado: a diferencia de cerrado/rechazado,
+  // está pensado para retomarse más adelante, así que el selector de etapa y
+  // el diálogo de cierre deben seguir disponibles.
+  const isClosed = deal.stage === "cerrado" || deal.stage === "rechazado";
 
   function handleStageChange(stage: string) {
     startTransition(async () => {
@@ -167,17 +167,17 @@ export function DealDetail({
         </Card>
       </div>
 
-      {(deal.stage === "perdido" || deal.stage === "aplazado") && deal.lost_reason && (
-        <Card className={deal.stage === "perdido" ? "border-destructive/40" : undefined}>
+      {(deal.stage === "rechazado" || deal.stage === "otro_anio") && deal.lost_reason && (
+        <Card className={deal.stage === "rechazado" ? "border-destructive/40" : undefined}>
           <CardHeader>
             <CardTitle
               className={
-                deal.stage === "perdido"
+                deal.stage === "rechazado"
                   ? "text-destructive text-sm font-medium"
                   : "text-sm font-medium"
               }
             >
-              {deal.stage === "perdido" ? "Motivo de pérdida" : "Nota de aplazamiento"}
+              {deal.stage === "rechazado" ? "Motivo de rechazo" : "Nota de aplazamiento"}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm">{deal.lost_reason}</CardContent>
@@ -237,8 +237,8 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
   async function markWon() {
     setLoading(true);
     try {
-      await updateDealOutcome(dealId, tipo, "ganado");
-      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como ganado`);
+      await updateDealOutcome(dealId, tipo, "cerrado");
+      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como cerrado`);
       setOpen(false);
     } catch (err) {
       toast.error("Error", { description: err instanceof Error ? err.message : undefined });
@@ -250,8 +250,8 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
   async function markLost() {
     setLoading(true);
     try {
-      await updateDealOutcome(dealId, tipo, "perdido", reason);
-      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como perdido`);
+      await updateDealOutcome(dealId, tipo, "rechazado", reason);
+      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como rechazado`);
       setOpen(false);
     } catch (err) {
       toast.error("Error", { description: err instanceof Error ? err.message : undefined });
@@ -263,8 +263,8 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
   async function markPostponed() {
     setLoading(true);
     try {
-      await updateDealOutcome(dealId, tipo, "aplazado", reason);
-      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como aplazado`);
+      await updateDealOutcome(dealId, tipo, "otro_anio", reason);
+      toast.success(`${entidad[0].toUpperCase()}${entidad.slice(1)} marcado como aplazado a otro año`);
       setOpen(false);
     } catch (err) {
       toast.error("Error", { description: err instanceof Error ? err.message : undefined });
@@ -284,11 +284,11 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <Button onClick={markWon} disabled={loading} variant="default">
-            Marcar como ganado
+            Marcar como cerrado
           </Button>
           <Separator />
           <div className="flex flex-col gap-2">
-            <Label>Motivo (si se pierde o se aplaza)</Label>
+            <Label>Motivo (si se rechaza o se aplaza)</Label>
             <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
           </div>
           <Button onClick={markPostponed} disabled={loading} variant="secondary">
@@ -297,7 +297,7 @@ function OutcomeDialog({ dealId, tipo }: { dealId: string; tipo: AccountType }) 
         </div>
         <DialogFooter>
           <Button onClick={markLost} disabled={loading} variant="destructive">
-            Marcar como perdido
+            Marcar como rechazado
           </Button>
         </DialogFooter>
       </DialogContent>

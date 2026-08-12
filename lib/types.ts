@@ -82,50 +82,38 @@ export const PROVINCIAS_ESPANA: string[] = [
 ];
 
 export type DealStage =
-  | "busqueda"
-  | "cadencia"
-  | "contacto"
-  | "agendada"
-  | "demo"
-  | "negociacion"
-  | "ganado"
-  | "aplazado"
-  | "perdido";
+  | "listado"
+  | "contactado"
+  | "pdte_firma"
+  | "cerrado"
+  | "rechazado"
+  | "otro_anio";
 
 export const DEAL_STAGES: DealStage[] = [
-  "busqueda",
-  "cadencia",
-  "contacto",
-  "agendada",
-  "demo",
-  "negociacion",
-  "ganado",
-  "aplazado",
-  "perdido",
+  "listado",
+  "contactado",
+  "pdte_firma",
+  "cerrado",
+  "rechazado",
+  "otro_anio",
 ];
 
 export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
-  busqueda: "Búsqueda",
-  cadencia: "Cadencia",
-  contacto: "Contacto",
-  agendada: "Agendada",
-  demo: "Presentación",
-  negociacion: "Acuerdo y condiciones",
-  ganado: "Ganado",
-  aplazado: "Aplazado",
-  perdido: "Perdido",
+  listado: "Listado",
+  contactado: "Contactado",
+  pdte_firma: "Pdte Firma",
+  cerrado: "Cerrado",
+  rechazado: "Rechazado",
+  otro_anio: "Otro año",
 };
 
 export const DEAL_STAGE_DESCRIPTIONS: Record<DealStage, string> = {
-  busqueda: "Se buscan posibles clientes y se recopilan los datos necesarios para operar.",
-  cadencia: "Intentos de contacto hasta que conseguimos ese contacto o se acaba la secuencia.",
-  contacto: "Fase en la que hablamos para agendar reunión.",
-  agendada: "Reunión de presentación en la que hablamos del problema y se agenda la propuesta.",
-  demo: "Se presenta la propuesta y cómo encaja con sus necesidades.",
-  negociacion: "Se acuerdan las condiciones (comisión, exclusividad, alcance) antes de cerrar.",
-  ganado: "Cliente cerrado.",
-  aplazado: "No es el momento, pero quiere retomarlo la próxima temporada.",
-  perdido: "El negocio no salió adelante.",
+  listado: "Cuenta registrada, todavía sin contactar.",
+  contactado: "Ya ha habido contacto: llamada, reunión o presentación de la propuesta.",
+  pdte_firma: "Se han acordado las condiciones (comisión, exclusividad, alcance); falta firmar.",
+  cerrado: "Cliente cerrado.",
+  rechazado: "El negocio no salió adelante.",
+  otro_anio: "No es el momento, pero quiere retomarlo la próxima temporada.",
 };
 
 export const DEFAULT_CADENCE_TEMPLATE: { label: string; action: string }[] = [

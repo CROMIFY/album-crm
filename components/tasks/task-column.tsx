@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -116,9 +117,11 @@ export function TaskColumn({
           isOver && "bg-accent border-accent-foreground/20"
         )}
       >
-        {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onOpen={onOpenTask} />
-        ))}
+        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          {tasks.map((task) => (
+            <TaskCard key={task.id} task={task} onOpen={onOpenTask} />
+          ))}
+        </SortableContext>
         <QuickAddTask columnId={column.id} />
       </div>
     </div>

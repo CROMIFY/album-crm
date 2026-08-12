@@ -110,7 +110,7 @@ export function NewDealDialog({ tipo }: { tipo: AccountType }) {
         <DialogHeader>
           <DialogTitle>Nuevo {entidad}</DialogTitle>
           <DialogDescription>
-            Se crea la cuenta, el contacto y el {entidad} en la etapa &quot;Búsqueda&quot;.
+            Se crea la cuenta, el contacto y el {entidad} en la etapa &quot;Listado&quot;.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">

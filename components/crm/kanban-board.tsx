@@ -13,19 +13,19 @@ const PHASES = [
     name: "Generar Leads",
     span: 1,
     color: "var(--chart-2)",
-    description: "Búsqueda",
+    description: "Listado",
   },
   {
     name: "Prospección",
-    span: 4,
+    span: 1,
     color: "var(--chart-5)",
-    description: "Cadencia + Contacto + Agendada + Presentación",
+    description: "Contactado",
   },
   {
     name: "Cierre",
     span: 4,
     color: "var(--chart-3)",
-    description: "Acuerdo y condiciones → Ganado, Aplazado o Perdido",
+    description: "Pdte Firma → Cerrado, Rechazado u Otro año",
   },
 ];
 

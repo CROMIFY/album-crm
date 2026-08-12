@@ -1,6 +1,6 @@
 "use client";
 
-import { useDraggable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,13 +24,17 @@ export function TaskCard({
   task: TaskWithRelations;
   onOpen: (task: TaskWithRelations) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
+    data: { type: "task", columnId: task.column_id },
   });
 
-  const style = transform
-    ? { transform: CSS.Translate.toString(transform), zIndex: isDragging ? 10 : undefined }
-    : undefined;
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.5 : undefined,
+  };
 
   const doneSubtasks = task.subtasks?.filter((s) => s.done).length ?? 0;
   const totalSubtasks = task.subtasks?.length ?? 0;

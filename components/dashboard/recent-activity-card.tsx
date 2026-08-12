@@ -30,8 +30,8 @@ export function RecentActivityCard({ activity }: { activity: ActivityItem[] }) {
           <ul className="flex flex-col">
             {activity.map((item, i) => {
               const account = item.deal?.account;
-              const isWon = item.to_stage === "ganado";
-              const isLost = item.to_stage === "perdido";
+              const isWon = item.to_stage === "cerrado";
+              const isLost = item.to_stage === "rechazado";
               return (
                 <li key={item.id} className="relative flex gap-3 pb-6 last:pb-0">
                   {i < activity.length - 1 && (
