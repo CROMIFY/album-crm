@@ -7,12 +7,14 @@ export function KpiCard({
   icon,
   label,
   value,
+  suffix,
   sublabel,
   accent,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
+  suffix?: string;
   sublabel: string;
   accent?: "warning";
 }) {
@@ -21,7 +23,10 @@ export function KpiCard({
       <CardContent className="flex items-start justify-between">
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-sm">{label}</span>
-          <span className="text-3xl font-semibold tabular-nums">{value}</span>
+          <span className="text-3xl font-semibold tabular-nums">
+            {value}
+            {suffix}
+          </span>
           <span className="text-muted-foreground text-xs">{sublabel}</span>
         </div>
         <div

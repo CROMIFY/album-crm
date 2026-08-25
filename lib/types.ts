@@ -324,6 +324,42 @@ export type GoogleCalendarTokenRow = {
   updated_at: string;
 };
 
+export type ExpenseBillingCycle = "unico" | "mensual" | "anual";
+export type ExpenseStatus = "activo" | "cancelado";
+
+export const EXPENSE_BILLING_CYCLE_LABELS: Record<ExpenseBillingCycle, string> = {
+  unico: "Pago único",
+  mensual: "Mensual",
+  anual: "Anual",
+};
+
+export const EXPENSE_STATUS_LABELS: Record<ExpenseStatus, string> = {
+  activo: "Activo",
+  cancelado: "Cancelado",
+};
+
+export type ExpenseCategoryRow = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+export type ExpenseRow = {
+  id: string;
+  name: string;
+  category_id: string | null;
+  vendor: string | null;
+  amount: number;
+  billing_cycle: ExpenseBillingCycle;
+  starts_at: string;
+  next_billing_date: string | null;
+  status: ExpenseStatus;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 // Vistas "con relaciones" para selects con embedding de Supabase. El cliente
 // tipado no conoce las foreign keys reales (no generamos tipos desde un
 // proyecto Supabase vivo), así que estas queries se castean explícitamente a
@@ -351,6 +387,18 @@ export type MeetingWithRelations = MeetingRow & {
   actionItems: MeetingActionItemRow[];
 };
 
+export type ExpenseWithRelations = ExpenseRow & {
+  category: ExpenseCategoryRow | null;
+};
+
+// Total mensual recurrente: gastos activos, normalizando los anuales a su
+// equivalente mensual (÷12). Los pagos únicos no forman parte de este total.
+export function monthlyRecurringTotal(expenses: ExpenseRow[]) {
+  return expenses
+    .filter((e) => e.status === "activo" && e.billing_cycle !== "unico")
+    .reduce((sum, e) => sum + (e.billing_cycle === "anual" ? e.amount / 12 : e.amount), 0);
+}
+
 // Forma ligera para listados (Próximas/Pasadas/Calendario/ficha de cuenta):
 // evita traer notas, action items y asistentes completos cuando la UI solo
 // pinta título, fecha, estado y el nombre de la cuenta.
@@ -375,6 +423,8 @@ export type Database = {
       sponsor_scope: SponsorScope;
       sponsor_level: SponsorLevel;
       meeting_status: MeetingStatus;
+      expense_billing_cycle: ExpenseBillingCycle;
+      expense_status: ExpenseStatus;
     };
     Tables: {
       profiles: Table<ProfileRow, Insertable<ProfileRow, "rol">, Partial<ProfileRow>>;
@@ -484,6 +534,26 @@ export type Database = {
         GoogleCalendarTokenRow,
         Insertable<GoogleCalendarTokenRow>,
         Partial<GoogleCalendarTokenRow>
+      >;
+      expense_categories: Table<
+        ExpenseCategoryRow,
+        Omit<ExpenseCategoryRow, "id">,
+        Partial<ExpenseCategoryRow>
+      >;
+      expenses: Table<
+        ExpenseRow,
+        Insertable<
+          ExpenseRow,
+          | "category_id"
+          | "vendor"
+          | "billing_cycle"
+          | "starts_at"
+          | "next_billing_date"
+          | "status"
+          | "notes"
+          | "created_by"
+        >,
+        Partial<ExpenseRow>
       >;
     };
   };

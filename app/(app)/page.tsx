@@ -1,4 +1,5 @@
-import { Building2, Handshake, Trophy, AlarmClock } from "lucide-react";
+import Link from "next/link";
+import { Building2, Handshake, Trophy, AlarmClock, Receipt } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { FunnelSummary } from "@/components/dashboard/funnel-summary";
 import { UpcomingTasksCard } from "@/components/dashboard/upcoming-tasks-card";
@@ -44,6 +45,15 @@ export default async function Home() {
           sublabel="requieren atención hoy"
           accent="warning"
         />
+        <Link href="/crm/gastos">
+          <KpiCard
+            icon={<Receipt className="h-4 w-4" />}
+            label="Gasto mensual recurrente"
+            value={Math.round(kpis.monthlyExpenses)}
+            suffix=" €"
+            sublabel="suscripciones activas"
+          />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
