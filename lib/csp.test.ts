@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildCsp } from "./csp";
 
 describe("buildCsp", () => {
@@ -23,5 +23,22 @@ describe("buildCsp", () => {
     expect(header).toContain("frame-ancestors 'none'");
     expect(header).toContain("base-uri 'self'");
     expect(header).toContain("form-action 'self'");
+  });
+
+  describe("with NEXT_PUBLIC_SENTRY_DSN set", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
+    it("allows connect-src to the Sentry ingest host so error reports aren't blocked", async () => {
+      vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://abc@o123.ingest.de.sentry.io/456");
+      vi.resetModules();
+      const { buildCsp: buildCspWithSentry } = await import("./csp");
+
+      const header = buildCspWithSentry("n", false);
+      expect(header).toContain("connect-src 'self'");
+      expect(header).toContain("https://o123.ingest.de.sentry.io");
+    });
   });
 });
