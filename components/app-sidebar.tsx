@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Shield, Handshake, KanbanSquare, CalendarClock, Receipt } from "lucide-react";
+import {
+  LayoutDashboard,
+  Shield,
+  Handshake,
+  KanbanSquare,
+  CalendarClock,
+  Receipt,
+  Rocket,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +30,7 @@ const NAV = [
   { href: "/tareas", label: "Tareas", icon: KanbanSquare },
   { href: "/crm/reuniones", label: "Reuniones", icon: CalendarClock },
   { href: "/crm/gastos", label: "Gastos", icon: Receipt },
+  { href: "/crm/deploys", label: "Deploys", icon: Rocket },
 ];
 
 export function AppSidebar() {

@@ -42,3 +42,7 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Plantilla documentando qué variables de entorno hacen falta y por qué — sin
+# valores reales, se puede versionar para que el equipo sepa qué configurar.
+!.env.local.example
