@@ -43,7 +43,7 @@ function baseLayout({
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="padding-right:12px;vertical-align:middle;">
-                      <img src="https://cromify.app/brand/logo.png" width="36" height="36" alt="Cromify" style="border-radius:9px;display:block;">
+                      <img src="https://cromify.app/brand/logo-64.png" width="36" height="36" alt="Cromify" style="border-radius:9px;display:block;">
                     </td>
                     <td style="vertical-align:middle;">
                       <span style="font-size:19px;font-weight:900;color:#ffffff;letter-spacing:-0.02em;">Cromify</span>
