@@ -13,13 +13,14 @@ function isValidSignature(rawBody: string, signatureHeader: string | null, secre
 
 export async function POST(request: NextRequest) {
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
-  const rawBody = await request.text();
+  if (!secret) {
+    return NextResponse.json({ error: "Webhook no configurado" }, { status: 503 });
+  }
 
-  if (secret) {
-    const signature = request.headers.get("x-hub-signature-256");
-    if (!isValidSignature(rawBody, signature, secret)) {
-      return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
-    }
+  const rawBody = await request.text();
+  const signature = request.headers.get("x-hub-signature-256");
+  if (!isValidSignature(rawBody, signature, secret)) {
+    return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
   }
 
   const event = request.headers.get("x-github-event");
