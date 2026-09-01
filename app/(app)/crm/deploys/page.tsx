@@ -1,9 +1,9 @@
-import { DeploysView } from "@/components/crm/deploys-view";
-import { getDeploys, getDeployCredentialStatus } from "@/lib/queries/deploys";
+import { DeploysDashboardView } from "@/components/crm/deploys-dashboard-view";
+import { getJobsSummary, getDeployCredentialStatus } from "@/lib/queries/deploys";
 
 export default async function DeploysPage() {
-  const deploys = await getDeploys();
+  const jobs = await getJobsSummary();
   const credentials = getDeployCredentialStatus();
 
-  return <DeploysView deploys={deploys} credentials={credentials} />;
+  return <DeploysDashboardView jobs={jobs} credentials={credentials} />;
 }
