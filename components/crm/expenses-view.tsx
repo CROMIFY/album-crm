@@ -230,7 +230,14 @@ function ExpenseRow({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-semibold tabular-nums">{EUR.format(expense.amount)}</span>
+          <span className="flex flex-col items-end">
+            <span className="font-semibold tabular-nums">{EUR.format(expense.amount)}</span>
+            {expense.currency !== "EUR" && expense.original_amount != null && (
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {expense.original_amount.toFixed(2)} {expense.currency}
+              </span>
+            )}
+          </span>
           {expense.billing_cycle !== "unico" && expense.status === "activo" && (
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleRenew} title="Renovar">
               <RotateCw className="h-3.5 w-3.5" />

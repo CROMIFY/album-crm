@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { ExpenseBillingCycle, ExpenseStatus } from "@/lib/types";
+import { convertToEur, type ExpenseCurrency } from "@/lib/fx";
+import { addBillingCycle, type ExpenseBillingCycle, type ExpenseStatus } from "@/lib/types";
 
 const EXPENSES_PATH = "/crm/gastos";
 
@@ -16,6 +17,7 @@ export async function createExpense(input: {
   categoryId?: string;
   vendor?: string;
   amount: number;
+  currency: ExpenseCurrency;
   billingCycle: ExpenseBillingCycle;
   startsAt: string;
   nextBillingDate?: string;
@@ -26,11 +28,15 @@ export async function createExpense(input: {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const amountEur = await convertToEur(input.amount, input.currency);
+
   const { error } = await supabase.from("expenses").insert({
     name: input.name,
     category_id: input.categoryId || null,
     vendor: input.vendor || null,
-    amount: input.amount,
+    amount: amountEur,
+    currency: input.currency,
+    original_amount: input.currency === "EUR" ? null : input.amount,
     billing_cycle: input.billingCycle,
     starts_at: input.startsAt,
     next_billing_date: input.billingCycle === "unico" ? null : input.nextBillingDate || null,
@@ -49,6 +55,7 @@ export async function updateExpense(
     categoryId?: string;
     vendor?: string;
     amount: number;
+    currency: ExpenseCurrency;
     billingCycle: ExpenseBillingCycle;
     startsAt: string;
     nextBillingDate?: string;
@@ -56,13 +63,18 @@ export async function updateExpense(
   }
 ) {
   const supabase = await createClient();
+
+  const amountEur = await convertToEur(input.amount, input.currency);
+
   const { error } = await supabase
     .from("expenses")
     .update({
       name: input.name,
       category_id: input.categoryId || null,
       vendor: input.vendor || null,
-      amount: input.amount,
+      amount: amountEur,
+      currency: input.currency,
+      original_amount: input.currency === "EUR" ? null : input.amount,
       billing_cycle: input.billingCycle,
       starts_at: input.startsAt,
       next_billing_date: input.billingCycle === "unico" ? null : input.nextBillingDate || null,
@@ -105,13 +117,11 @@ export async function renewExpense(id: string) {
     throw new Error("Este gasto no es recurrente.");
   }
 
-  const next = new Date(expense.next_billing_date);
-  if (expense.billing_cycle === "mensual") next.setMonth(next.getMonth() + 1);
-  else next.setFullYear(next.getFullYear() + 1);
+  const next = addBillingCycle(expense.next_billing_date, expense.billing_cycle);
 
   const { error } = await supabase
     .from("expenses")
-    .update({ next_billing_date: next.toISOString().slice(0, 10) })
+    .update({ next_billing_date: next })
     .eq("id", id);
   if (error) throw new Error(error.message);
 

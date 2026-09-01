@@ -5,6 +5,7 @@ describe("expenseSchema", () => {
   const base = {
     name: "Notion",
     amount: "10",
+    currency: "EUR" as const,
     billing_cycle: "mensual" as const,
     starts_at: "2026-01-01",
     next_billing_date: "2026-09-05",
@@ -18,6 +19,7 @@ describe("expenseSchema", () => {
     const result = expenseSchema.safeParse({
       name: "Dominio cromify.com",
       amount: "12",
+      currency: "EUR",
       billing_cycle: "unico",
       starts_at: "2026-01-03",
     });
@@ -37,6 +39,7 @@ describe("expenseSchema", () => {
     const result = expenseSchema.safeParse({
       name: "Notion",
       amount: "10",
+      currency: "EUR",
       billing_cycle: "mensual",
       starts_at: "2026-01-01",
     });

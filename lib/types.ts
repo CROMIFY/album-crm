@@ -350,6 +350,8 @@ export type ExpenseRow = {
   category_id: string | null;
   vendor: string | null;
   amount: number;
+  currency: string;
+  original_amount: number | null;
   billing_cycle: ExpenseBillingCycle;
   starts_at: string;
   next_billing_date: string | null;
@@ -390,6 +392,19 @@ export type MeetingWithRelations = MeetingRow & {
 export type ExpenseWithRelations = ExpenseRow & {
   category: ExpenseCategoryRow | null;
 };
+
+// Suma un ciclo de facturación a una fecha (YYYY-MM-DD): usada tanto para
+// sugerir la primera renovación a partir de la fecha de inicio como para
+// avanzar la renovación al marcar un pago recurrente como renovado.
+export function addBillingCycle(
+  dateStr: string,
+  cycle: Exclude<ExpenseBillingCycle, "unico">
+): string {
+  const date = new Date(`${dateStr}T00:00:00`);
+  if (cycle === "mensual") date.setMonth(date.getMonth() + 1);
+  else date.setFullYear(date.getFullYear() + 1);
+  return date.toISOString().slice(0, 10);
+}
 
 // Total mensual recurrente: gastos activos, normalizando los anuales a su
 // equivalente mensual (÷12). Los pagos únicos no forman parte de este total.
@@ -546,6 +561,8 @@ export type Database = {
           ExpenseRow,
           | "category_id"
           | "vendor"
+          | "currency"
+          | "original_amount"
           | "billing_cycle"
           | "starts_at"
           | "next_billing_date"

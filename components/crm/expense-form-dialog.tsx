@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
@@ -26,8 +26,11 @@ import {
 } from "@/components/ui/select";
 import { expenseSchema, type ExpenseInput } from "@/lib/validation/expenses";
 import { createExpense, updateExpense } from "@/lib/actions/expenses";
-import { EXPENSE_BILLING_CYCLE_LABELS } from "@/lib/types";
+import { convertToEur, EXPENSE_CURRENCIES, EXPENSE_CURRENCY_LABELS } from "@/lib/fx";
+import { addBillingCycle, EXPENSE_BILLING_CYCLE_LABELS } from "@/lib/types";
 import type { ExpenseBillingCycle, ExpenseCategoryRow, ExpenseWithRelations } from "@/lib/types";
+
+const EUR = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 
 export function ExpenseFormDialog({
   categories,
@@ -40,13 +43,14 @@ export function ExpenseFormDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categoryId, setCategoryId] = useState(expense?.category_id ?? "none");
-  const [billingCycle, setBillingCycle] = useState<ExpenseBillingCycle>(
-    expense?.billing_cycle ?? "mensual"
-  );
+  const [preview, setPreview] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     reset,
+    control,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<ExpenseInput>({
     resolver: zodResolver(expenseSchema),
@@ -54,14 +58,39 @@ export function ExpenseFormDialog({
       ? {
           name: expense.name,
           vendor: expense.vendor ?? undefined,
-          amount: String(expense.amount),
+          amount: String(expense.original_amount ?? expense.amount),
+          currency: (expense.currency as ExpenseInput["currency"]) ?? "EUR",
           billing_cycle: expense.billing_cycle,
           starts_at: expense.starts_at,
           next_billing_date: expense.next_billing_date ?? undefined,
           notes: expense.notes ?? undefined,
         }
-      : { billing_cycle: "mensual" },
+      : { billing_cycle: "mensual", currency: "EUR" },
   });
+
+  const billingCycle = useWatch({ control, name: "billing_cycle" });
+  const amount = useWatch({ control, name: "amount" });
+  const currency = useWatch({ control, name: "currency" });
+
+  // Vista previa del cambio de divisa a EUR: solo cuando la divisa no es EUR,
+  // con debounce para no lanzar una petición en cada pulsación.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      if (!currency || currency === "EUR" || !amount || Number(amount) <= 0) {
+        setPreview(null);
+        return;
+      }
+      convertToEur(Number(amount), currency)
+        .then((eur) => setPreview(EUR.format(eur)))
+        .catch(() => setPreview(null));
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [amount, currency]);
+
+  function recalcNextBillingDate(startsAt: string, cycle: ExpenseBillingCycle) {
+    if (cycle === "unico" || !startsAt) return;
+    setValue("next_billing_date", addBillingCycle(startsAt, cycle), { shouldValidate: true });
+  }
 
   async function onSubmit(values: ExpenseInput) {
     setLoading(true);
@@ -71,7 +100,8 @@ export function ExpenseFormDialog({
         categoryId: categoryId === "none" ? undefined : categoryId,
         vendor: values.vendor,
         amount: Number(values.amount),
-        billingCycle: billingCycle,
+        currency: values.currency,
+        billingCycle: values.billing_cycle,
         startsAt: values.starts_at,
         nextBillingDate: values.next_billing_date,
         notes: values.notes,
@@ -84,7 +114,7 @@ export function ExpenseFormDialog({
         toast.success("Gasto creado");
         reset();
         setCategoryId("none");
-        setBillingCycle("mensual");
+        setPreview(null);
       }
       setOpen(false);
     } catch (err) {
@@ -144,33 +174,70 @@ export function ExpenseFormDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
-              <Label>Importe (€)</Label>
-              <Input type="number" step="0.01" {...register("amount")} />
+              <Label>Importe</Label>
+              <div className="flex gap-2">
+                <Input type="number" step="0.01" className="flex-1" {...register("amount")} />
+                <Controller
+                  control={control}
+                  name="currency"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EXPENSE_CURRENCIES.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {EXPENSE_CURRENCY_LABELS[c]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
               {errors.amount && <p className="text-destructive text-sm">{errors.amount.message}</p>}
+              {preview && <p className="text-muted-foreground text-xs">≈ {preview}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Label>Periodicidad</Label>
-              <Select
-                value={billingCycle}
-                onValueChange={(v) => setBillingCycle(v as ExpenseBillingCycle)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(EXPENSE_BILLING_CYCLE_LABELS) as ExpenseBillingCycle[]).map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {EXPENSE_BILLING_CYCLE_LABELS[c]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="billing_cycle"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      recalcNextBillingDate(getValues("starts_at"), v as ExpenseBillingCycle);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(EXPENSE_BILLING_CYCLE_LABELS) as ExpenseBillingCycle[]).map(
+                        (c) => (
+                          <SelectItem key={c} value={c}>
+                            {EXPENSE_BILLING_CYCLE_LABELS[c]}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
               <Label>Fecha {billingCycle === "unico" ? "del gasto" : "de inicio"}</Label>
-              <Input type="date" {...register("starts_at")} />
+              <Input
+                type="date"
+                {...register("starts_at", {
+                  onChange: (e) => recalcNextBillingDate(e.target.value, billingCycle),
+                })}
+              />
               {errors.starts_at && (
                 <p className="text-destructive text-sm">{errors.starts_at.message}</p>
               )}

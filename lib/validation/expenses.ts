@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { EXPENSE_CURRENCIES } from "@/lib/fx";
 
 export const expenseSchema = z
   .object({
@@ -9,6 +10,7 @@ export const expenseSchema = z
       .string()
       .min(1, { message: "Introduce un importe." })
       .refine((v) => Number(v) > 0, { message: "Introduce un importe mayor que 0." }),
+    currency: z.enum(EXPENSE_CURRENCIES),
     billing_cycle: z.enum(["unico", "mensual", "anual"]),
     starts_at: z.string().min(1, { message: "Introduce una fecha." }),
     next_billing_date: z.string().optional(),
