@@ -99,8 +99,8 @@ export function DeploysDashboardView({
           <li key={job.key}>
             <Link href={`/crm/deploys/${job.key}`}>
               <Card>
-                <CardContent className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-sm">
-                  <div className="flex min-w-0 flex-col gap-1">
+                <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <span className="truncate font-medium">{job.label}</span>
                     {job.lastBuild ? (
                       <p className="text-muted-foreground truncate text-xs">
@@ -112,7 +112,7 @@ export function DeploysDashboardView({
                     )}
                   </div>
                   {job.lastBuild && (
-                    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1">
+                    <div className="ml-auto flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1">
                       <span className="text-muted-foreground text-xs">
                         {formatBuildDuration(job.lastBuild.startedAt, job.lastBuild.finishedAt)}
                       </span>
