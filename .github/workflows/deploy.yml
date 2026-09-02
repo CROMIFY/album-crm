@@ -2,6 +2,12 @@ name: Deploy to Vercel (production)
 
 # Vercel Hobby no soporta la integracion nativa de Git para repos privados
 # de organizacion, asi que el auto-deploy va por aqui via Vercel CLI + token.
+#
+# Importante: el deploy tiene que compilarse en la infraestructura de
+# Vercel (deploy por codigo fuente), no en el runner de GitHub Actions.
+# "vercel build" en local no puede leer las env vars marcadas como
+# "Sensitive" (llegan como el literal "[SENSITIVE]" y rompen el build) --
+# asi se rompio crm.cromify.app (Supabase URL / Sentry DSN) la primera vez.
 on:
   push:
     branches: [master]
@@ -17,25 +23,12 @@ jobs:
         with:
           node-version: 22
 
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Pull Vercel environment info
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - name: Deploy to production
+        run: vercel deploy --prod --yes --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build
-        run: vercel build --prod --token="$VERCEL_TOKEN"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy
-        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
