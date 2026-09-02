@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Receipt,
   Rocket,
+  Bug,
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,6 +32,7 @@ const NAV = [
   { href: "/crm/reuniones", label: "Reuniones", icon: CalendarClock },
   { href: "/crm/gastos", label: "Gastos", icon: Receipt },
   { href: "/crm/deploys", label: "Deploys", icon: Rocket },
+  { href: "/crm/errores", label: "Errores", icon: Bug },
 ];
 
 export function AppSidebar() {
