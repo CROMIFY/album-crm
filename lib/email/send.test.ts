@@ -4,48 +4,61 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 // condition (i.e. under plain Vitest) — neutralize it just for this test.
 vi.mock("server-only", () => ({}));
 
-const sendMail = vi.fn();
-vi.mock("nodemailer", () => ({
-  default: {
-    createTransport: () => ({ sendMail }),
-  },
-}));
-
 describe("sendEmail", () => {
-  const originalUser = process.env.GMAIL_USER;
-  const originalPass = process.env.GMAIL_APP_PASSWORD;
+  const originalKey = process.env.RESEND_API_KEY;
+  const fetchMock = vi.fn();
 
   beforeEach(() => {
-    sendMail.mockReset();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
     vi.resetModules();
   });
 
   afterEach(() => {
-    process.env.GMAIL_USER = originalUser;
-    process.env.GMAIL_APP_PASSWORD = originalPass;
+    process.env.RESEND_API_KEY = originalKey;
+    vi.unstubAllGlobals();
   });
 
-  it("no-ops without throwing when credentials are not configured", async () => {
-    delete process.env.GMAIL_USER;
-    delete process.env.GMAIL_APP_PASSWORD;
+  it("no-ops without throwing when RESEND_API_KEY is not configured", async () => {
+    delete process.env.RESEND_API_KEY;
     const { sendEmail } = await import("./send");
 
     const result = await sendEmail({ to: "a@b.com", subject: "Hola", html: "<p>hola</p>" });
 
     expect(result).toEqual({ sent: false });
-    expect(sendMail).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("sends through nodemailer when credentials are configured", async () => {
-    process.env.GMAIL_USER = "cromifyes@gmail.com";
-    process.env.GMAIL_APP_PASSWORD = "fake-app-password";
+  it("sends through the Resend API when RESEND_API_KEY is configured", async () => {
+    process.env.RESEND_API_KEY = "fake-api-key";
+    fetchMock.mockResolvedValue({ ok: true, text: async () => "" });
     const { sendEmail } = await import("./send");
 
     const result = await sendEmail({ to: "a@b.com", subject: "Hola", html: "<p>hola</p>" });
 
     expect(result).toEqual({ sent: true });
-    expect(sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "a@b.com", subject: "Hola", html: "<p>hola</p>" })
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Authorization: "Bearer fake-api-key" }),
+        body: JSON.stringify({
+          from: "AlbumCromos CRM <crm@cromify.app>",
+          to: "a@b.com",
+          subject: "Hola",
+          html: "<p>hola</p>",
+        }),
+      })
     );
+  });
+
+  it("throws when Resend responds with an error", async () => {
+    process.env.RESEND_API_KEY = "fake-api-key";
+    fetchMock.mockResolvedValue({ ok: false, status: 422, text: async () => "invalid from" });
+    const { sendEmail } = await import("./send");
+
+    await expect(
+      sendEmail({ to: "a@b.com", subject: "Hola", html: "<p>hola</p>" })
+    ).rejects.toThrow("422");
   });
 });

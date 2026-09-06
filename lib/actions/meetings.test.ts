@@ -3,7 +3,7 @@ import { createMeeting, cancelMeeting, addMeetingNote } from "./meetings";
 
 // meetings.ts no importa "server-only" directamente, pero sus dependencias
 // (lib/actions/tasks, lib/google/calendar) sí — se mockean por completo para
-// no arrastrar nodemailer/googleapis a este test.
+// no arrastrar googleapis a este test.
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/actions/tasks", () => ({ createTask: vi.fn(), setTaskDone: vi.fn() }));
@@ -20,7 +20,7 @@ type FakeResult = { data?: unknown; error?: unknown };
 
 // No hay precedente en el repo para mockear el query builder encadenable de
 // Supabase (ver lib/email/send.test.ts para el único mock existente, que es
-// de nodemailer). Este builder soporta cualquier cadena de filtros y resuelve
+// de fetch). Este builder soporta cualquier cadena de filtros y resuelve
 // al resultado configurado en cuanto se hace `await` o se llama a
 // `.single()`/`.maybeSingle()`.
 function fakeBuilder(result: FakeResult) {
