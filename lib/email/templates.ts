@@ -129,6 +129,43 @@ export function taskAssignedEmail({
   return { subject, html };
 }
 
+export function taskUpdatedEmail({
+  assigneeName,
+  taskTitle,
+  columnName,
+  priority,
+  dueDate,
+}: {
+  assigneeName: string;
+  taskTitle: string;
+  columnName: string;
+  priority: TaskPriority;
+  dueDate: string | null;
+}) {
+  const subject = `Tarea actualizada: ${taskTitle}`;
+  const dueLine = dueDate
+    ? detailLine("Vence", new Date(dueDate).toLocaleDateString("es-ES"))
+    : "";
+
+  const html = baseLayout({
+    preheader: subject,
+    eyebrow: "Tareas",
+    title: "Tarea actualizada",
+    body: `
+      <p style="margin:0 0 16px;">Hola ${escapeHtml(assigneeName)}, se ha actualizado una tarea asignada a ti:</p>
+      ${detailBox(`
+        <p style="margin:0 0 8px;font-weight:800;color:#111827;font-size:15px;">${escapeHtml(taskTitle)}</p>
+        ${detailLine("Columna", escapeHtml(columnName))}
+        ${detailLine("Prioridad", PRIORITY_LABELS[priority])}
+        ${dueLine}
+      `)}
+      ${button(`${APP_URL}/tareas`, "Ver tablero de tareas")}
+    `,
+  });
+
+  return { subject, html };
+}
+
 export function meetingScheduledEmail({
   attendeeName,
   meetingTitle,

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/send";
-import { taskAssignedEmail } from "@/lib/email/templates";
+import { taskAssignedEmail, taskUpdatedEmail } from "@/lib/email/templates";
 import type { TaskPriority } from "@/lib/types";
 
 const BOARD_PATH = "/tareas";
@@ -19,17 +19,21 @@ async function hasPendingSubtasks(supabase: Supabase, taskId: string) {
   return (count ?? 0) > 0;
 }
 
+type TaskEmailFields = {
+  assigneeIds: string[];
+  taskTitle: string;
+  columnId: string;
+  priority: TaskPriority;
+  dueDate: string | null;
+};
+
 // Best-effort: un fallo enviando el email nunca debe romper la acción de
 // crear/editar la tarea, solo se registra en el servidor.
-async function notifyTasksAssigned(
+async function notifyAssignees(
   supabase: Supabase,
-  {
-    assigneeIds,
-    taskTitle,
-    columnId,
-    priority,
-    dueDate,
-  }: { assigneeIds: string[]; taskTitle: string; columnId: string; priority: TaskPriority; dueDate: string | null }
+  { assigneeIds, taskTitle, columnId, priority, dueDate }: TaskEmailFields,
+  buildEmail: typeof taskAssignedEmail,
+  errorContext: string
 ) {
   if (assigneeIds.length === 0) return;
   try {
@@ -41,7 +45,7 @@ async function notifyTasksAssigned(
 
     await Promise.all(
       assignees.map(async (assignee) => {
-        const { subject, html } = taskAssignedEmail({
+        const { subject, html } = buildEmail({
           assigneeName: assignee.nombre,
           taskTitle,
           columnName: column.name,
@@ -52,8 +56,16 @@ async function notifyTasksAssigned(
       })
     );
   } catch (err) {
-    console.error("No se pudo enviar el email de tarea asignada:", err);
+    console.error(errorContext, err);
   }
+}
+
+function notifyTasksAssigned(supabase: Supabase, fields: TaskEmailFields) {
+  return notifyAssignees(supabase, fields, taskAssignedEmail, "No se pudo enviar el email de tarea asignada:");
+}
+
+function notifyTaskUpdated(supabase: Supabase, fields: TaskEmailFields) {
+  return notifyAssignees(supabase, fields, taskUpdatedEmail, "No se pudo enviar el email de tarea actualizada:");
 }
 
 export async function createTask(input: {
@@ -164,11 +176,10 @@ export async function updateTask(
 ) {
   const supabase = await createClient();
 
-  const { data: existing } = await supabase
-    .from("tasks")
-    .select("column_id, title, priority, due_date")
-    .eq("id", taskId)
-    .single();
+  const [{ data: existing }, { data: currentRows }] = await Promise.all([
+    supabase.from("tasks").select("column_id, title, description, priority, due_date").eq("id", taskId).single(),
+    supabase.from("task_assignees").select("profile_id").eq("task_id", taskId),
+  ]);
 
   const { error } = await supabase
     .from("tasks")
@@ -183,15 +194,14 @@ export async function updateTask(
     .eq("id", taskId);
   if (error) throw new Error(error.message);
 
-  if (existing && input.assigneeIds !== undefined) {
-    const { data: currentRows } = await supabase
-      .from("task_assignees")
-      .select("profile_id")
-      .eq("task_id", taskId);
-    const current = new Set((currentRows ?? []).map((r) => r.profile_id));
-    const next = new Set(input.assigneeIds);
+  const currentAssigneeIds = (currentRows ?? []).map((r) => r.profile_id);
+  let toAdd: string[] = [];
+  let finalAssigneeIds = currentAssigneeIds;
 
-    const toAdd = input.assigneeIds.filter((id) => !current.has(id));
+  if (input.assigneeIds !== undefined) {
+    const current = new Set(currentAssigneeIds);
+    const next = new Set(input.assigneeIds);
+    toAdd = input.assigneeIds.filter((id) => !current.has(id));
     const toRemove = [...current].filter((id) => !next.has(id));
 
     if (toRemove.length > 0) {
@@ -207,14 +217,31 @@ export async function updateTask(
         .from("task_assignees")
         .insert(toAdd.map((profile_id) => ({ task_id: taskId, profile_id })));
       if (addError) throw new Error(addError.message);
+    }
+    finalAssigneeIds = input.assigneeIds;
+  }
 
-      await notifyTasksAssigned(supabase, {
-        assigneeIds: toAdd,
-        taskTitle: input.title ?? existing.title,
-        columnId: existing.column_id,
-        priority: input.priority ?? existing.priority,
-        dueDate: input.dueDate !== undefined ? input.dueDate : existing.due_date,
-      });
+  if (existing) {
+    const taskTitle = input.title ?? existing.title;
+    const priority = input.priority ?? existing.priority;
+    const dueDate = input.dueDate !== undefined ? input.dueDate : existing.due_date;
+
+    if (toAdd.length > 0) {
+      await notifyTasksAssigned(supabase, { assigneeIds: toAdd, taskTitle, columnId: existing.column_id, priority, dueDate });
+    }
+
+    // Los recién añadidos ya reciben el email de "tarea asignada" (con los
+    // datos ya actualizados), así que no hace falta mandarles también el de
+    // "tarea actualizada" en la misma edición.
+    const hasRelevantChange =
+      (input.title !== undefined && input.title !== existing.title) ||
+      (input.description !== undefined && input.description !== existing.description) ||
+      (input.dueDate !== undefined && input.dueDate !== existing.due_date) ||
+      (input.priority !== undefined && input.priority !== existing.priority);
+
+    if (hasRelevantChange) {
+      const notifyIds = finalAssigneeIds.filter((id) => !toAdd.includes(id));
+      await notifyTaskUpdated(supabase, { assigneeIds: notifyIds, taskTitle, columnId: existing.column_id, priority, dueDate });
     }
   }
 

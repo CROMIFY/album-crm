@@ -94,6 +94,34 @@ export async function fetchSentryIssues(
   }
 }
 
+// Cambia el estado de un issue (triage). Requiere que la Internal Integration
+// de Sentry tenga permiso de escritura sobre Issue & Event -- si el token
+// solo tiene lectura, Sentry devuelve 403 y lo propagamos como Error para
+// que la UI lo muestre en vez de fallar en silencio.
+export async function updateSentryIssueStatus(
+  issueId: string,
+  status: "resolved" | "ignored" | "unresolved"
+): Promise<void> {
+  const headers = sentryHeaders();
+  const org = orgSlug();
+  if (!headers || !org) throw new Error("Falta configurar SENTRY_API_TOKEN o SENTRY_ORG_SLUG.");
+
+  const res = await fetch(`${SENTRY_API_BASE}/organizations/${org}/issues/${issueId}/`, {
+    method: "PUT",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error(
+        "El token de Sentry no tiene permiso de escritura. Amplía el scope de la Internal Integration a Issue & Event: Read & Write."
+      );
+    }
+    throw new Error(`Sentry devolvió ${res.status} al actualizar el issue.`);
+  }
+}
+
 type RawFrame = {
   filename?: string | null;
   module?: string | null;

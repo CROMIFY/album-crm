@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, EyeOff, ExternalLink, RotateCcw, Users } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ignoreError, reopenError, resolveError } from "@/lib/actions/errors";
 import type { SentryIssueDetail, SentryIssueLevel, SentryIssueStatus } from "@/lib/errors/types";
 
 const LEVEL_LABELS: Record<SentryIssueLevel, string> = {
@@ -35,10 +38,24 @@ const STATUS_LABELS: Record<SentryIssueStatus, string> = {
 };
 
 export function ErrorDetailView({ issue }: { issue: SentryIssueDetail }) {
+  const [isPending, startTransition] = useTransition();
   const frequencyData = issue.frequency.map((p) => ({
     date: format(new Date(p.date), "d MMM", { locale: es }),
     eventos: p.count,
   }));
+
+  function runAction(action: (id: string) => Promise<void>, successMessage: string) {
+    startTransition(async () => {
+      try {
+        await action(issue.id);
+        toast.success(successMessage);
+      } catch (err) {
+        toast.error("No se pudo actualizar el issue", {
+          description: err instanceof Error ? err.message : undefined,
+        });
+      }
+    });
+  }
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4">
@@ -63,14 +80,47 @@ export function ErrorDetailView({ issue }: { issue: SentryIssueDetail }) {
           {issue.culprit && <p className="text-muted-foreground text-sm">{issue.culprit}</p>}
         </div>
 
-        {issue.permalink && (
-          <Button asChild variant="outline" size="sm">
-            <a href={issue.permalink} target="_blank" rel="noreferrer">
-              Ver en Sentry
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </Button>
-        )}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {issue.status === "unresolved" ? (
+            <>
+              <Button
+                size="sm"
+                disabled={isPending}
+                onClick={() => runAction(resolveError, "Issue marcado como resuelto")}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Marcar como resuelto
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isPending}
+                onClick={() => runAction(ignoreError, "Issue ignorado")}
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+                Ignorar
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isPending}
+              onClick={() => runAction(reopenError, "Issue reabierto")}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reabrir
+            </Button>
+          )}
+          {issue.permalink && (
+            <Button asChild variant="outline" size="sm">
+              <a href={issue.permalink} target="_blank" rel="noreferrer">
+                Ver en Sentry
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

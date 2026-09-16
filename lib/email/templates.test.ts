@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { taskAssignedEmail, taskDueReminderEmail } from "./templates";
+import { taskAssignedEmail, taskDueReminderEmail, taskUpdatedEmail } from "./templates";
 
 describe("taskAssignedEmail", () => {
   it("includes the task title in the subject and body", () => {
@@ -37,6 +37,32 @@ describe("taskAssignedEmail", () => {
     });
     expect(html).not.toContain("<img src=x onerror=alert(1)>");
     expect(html).toContain("&lt;img");
+  });
+});
+
+describe("taskUpdatedEmail", () => {
+  it("includes the task title and priority in subject and body", () => {
+    const { subject, html } = taskUpdatedEmail({
+      assigneeName: "Jaime",
+      taskTitle: "Revisar despliegue",
+      columnName: "Backlog",
+      priority: "alta",
+      dueDate: "2026-08-01",
+    });
+    expect(subject).toContain("Revisar despliegue");
+    expect(html).toContain("Revisar despliegue");
+    expect(html).toContain("Alta");
+  });
+
+  it("omits the due date line when there is none", () => {
+    const { html } = taskUpdatedEmail({
+      assigneeName: "Jaime",
+      taskTitle: "Sin fecha",
+      columnName: "Backlog",
+      priority: "media",
+      dueDate: null,
+    });
+    expect(html).not.toContain("Vence:");
   });
 });
 
