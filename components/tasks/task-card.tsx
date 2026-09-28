@@ -17,6 +17,90 @@ const PRIORITY_STYLES: Record<string, string> = {
   alta: "bg-[color-mix(in_oklch,var(--chart-4)_30%,transparent)] text-foreground",
 };
 
+function initialsFor(nombre: string) {
+  return nombre
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function TaskCardContent({
+  task,
+  onDoneChange,
+}: {
+  task: TaskWithRelations;
+  onDoneChange?: (checked: boolean) => void;
+}) {
+  const doneSubtasks = task.subtasks?.filter((s) => s.done).length ?? 0;
+  const totalSubtasks = task.subtasks?.length ?? 0;
+
+  return (
+    <CardContent className="flex flex-col gap-2 px-3">
+      {task.labels.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {task.labels.map((label) => (
+            <span
+              key={label.id}
+              className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white"
+              style={{ backgroundColor: label.color }}
+            >
+              {label.name}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex items-start gap-2">
+        <div onClick={(e) => e.stopPropagation()} className="pt-0.5">
+          <Checkbox
+            checked={task.done}
+            onCheckedChange={(c) => onDoneChange?.(c === true)}
+          />
+        </div>
+        <span className={cn("text-sm font-medium", task.done && "text-muted-foreground line-through")}>
+          {task.title}
+        </span>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] font-medium capitalize",
+              PRIORITY_STYLES[task.priority]
+            )}
+          >
+            {task.priority}
+          </span>
+          <SubtaskProgressRing done={doneSubtasks} total={totalSubtasks} />
+          {task.due_date && (
+            <span className="text-muted-foreground text-xs">
+              {new Date(task.due_date).toLocaleDateString("es-ES", {
+                day: "2-digit",
+                month: "short",
+              })}
+            </span>
+          )}
+        </div>
+        {task.assignees.length > 0 && (
+          <div className="flex -space-x-1.5">
+            {task.assignees.slice(0, 3).map((assignee) => (
+              <Avatar key={assignee.id} className="ring-card h-5 w-5 ring-2">
+                <AvatarFallback className="text-[9px]">{initialsFor(assignee.nombre)}</AvatarFallback>
+              </Avatar>
+            ))}
+            {task.assignees.length > 3 && (
+              <Avatar className="ring-card h-5 w-5 ring-2">
+                <AvatarFallback className="text-[9px]">+{task.assignees.length - 3}</AvatarFallback>
+              </Avatar>
+            )}
+          </div>
+        )}
+      </div>
+    </CardContent>
+  );
+}
+
 export function TaskCard({
   task,
   onOpen,
@@ -32,21 +116,7 @@ export function TaskCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 10 : undefined,
-    opacity: isDragging ? 0.5 : undefined,
   };
-
-  const doneSubtasks = task.subtasks?.filter((s) => s.done).length ?? 0;
-  const totalSubtasks = task.subtasks?.length ?? 0;
-
-  function initialsFor(nombre: string) {
-    return nombre
-      .split(" ")
-      .map((p) => p[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  }
 
   async function handleDoneChange(checked: boolean) {
     try {
@@ -64,67 +134,21 @@ export function TaskCard({
       style={style}
       {...listeners}
       {...attributes}
-      onClick={() => onOpen(task)}
-      className="cursor-grab touch-none gap-2 py-3 active:cursor-grabbing"
+      onClick={() => !isDragging && onOpen(task)}
+      className={cn(
+        "shrink-0 cursor-grab touch-none gap-2 py-3 active:cursor-grabbing",
+        isDragging && "opacity-40"
+      )}
     >
-      <CardContent className="flex flex-col gap-2 px-3">
-        {task.labels.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {task.labels.map((label) => (
-              <span
-                key={label.id}
-                className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white"
-                style={{ backgroundColor: label.color }}
-              >
-                {label.name}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="flex items-start gap-2">
-          <div onClick={(e) => e.stopPropagation()} className="pt-0.5">
-            <Checkbox checked={task.done} onCheckedChange={(c) => handleDoneChange(c === true)} />
-          </div>
-          <span className={cn("text-sm font-medium", task.done && "text-muted-foreground line-through")}>
-            {task.title}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "rounded px-1.5 py-0.5 text-[10px] font-medium capitalize",
-                PRIORITY_STYLES[task.priority]
-              )}
-            >
-              {task.priority}
-            </span>
-            <SubtaskProgressRing done={doneSubtasks} total={totalSubtasks} />
-            {task.due_date && (
-              <span className="text-muted-foreground text-xs">
-                {new Date(task.due_date).toLocaleDateString("es-ES", {
-                  day: "2-digit",
-                  month: "short",
-                })}
-              </span>
-            )}
-          </div>
-          {task.assignees.length > 0 && (
-            <div className="flex -space-x-1.5">
-              {task.assignees.slice(0, 3).map((assignee) => (
-                <Avatar key={assignee.id} className="ring-card h-5 w-5 ring-2">
-                  <AvatarFallback className="text-[9px]">{initialsFor(assignee.nombre)}</AvatarFallback>
-                </Avatar>
-              ))}
-              {task.assignees.length > 3 && (
-                <Avatar className="ring-card h-5 w-5 ring-2">
-                  <AvatarFallback className="text-[9px]">+{task.assignees.length - 3}</AvatarFallback>
-                </Avatar>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
+      <TaskCardContent task={task} onDoneChange={handleDoneChange} />
+    </Card>
+  );
+}
+
+export function TaskCardOverlay({ task }: { task: TaskWithRelations }) {
+  return (
+    <Card className="w-72 cursor-grabbing gap-2 py-3 shadow-lg">
+      <TaskCardContent task={task} />
     </Card>
   );
 }
