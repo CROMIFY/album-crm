@@ -1,10 +1,19 @@
 "use client";
 
 import { useMemo, useOptimistic, useState, useTransition } from "react";
-import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { toast } from "sonner";
 import { TaskColumn } from "@/components/tasks/task-column";
+import { TaskCardOverlay } from "@/components/tasks/task-card";
 import { NewColumnButton } from "@/components/tasks/new-column-button";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { ManageLabelsDialog } from "@/components/tasks/manage-labels-dialog";
@@ -30,6 +39,7 @@ export function TaskBoard({
 }) {
   const [isPending, startTransition] = useTransition();
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [optimisticTasks, moveTask] = useOptimistic(
     tasks,
     (state, { taskId, columnId, orderedIds }: MoveAction) => {
@@ -57,6 +67,7 @@ export function TaskBoard({
   }, [columns, optimisticTasks]);
 
   const openTask = optimisticTasks.find((t) => t.id === openTaskId) ?? null;
+  const activeTask = activeId ? (optimisticTasks.find((t) => t.id === activeId) ?? null) : null;
 
   const labelUsageCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -68,7 +79,12 @@ export function TaskBoard({
     return map;
   }, [optimisticTasks]);
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -116,14 +132,20 @@ export function TaskBoard({
   }
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-4 p-4">
+    <div className="flex h-[calc(100dvh_-_3.5rem)] min-w-0 flex-col gap-4 overflow-hidden p-4">
       <HeaderPortal>
         <ManageLabelsDialog labels={labels} usageCounts={labelUsageCounts} />
         <NewTaskDialog columns={columns} labels={labels} profiles={profiles} />
       </HeaderPortal>
-      <h1 className="text-lg font-semibold">Tareas</h1>
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className={`flex min-w-0 flex-1 gap-3 overflow-x-auto pb-2 ${isPending ? "opacity-80" : ""}`}>
+      <h1 className="shrink-0 text-lg font-semibold">Tareas</h1>
+      <DndContext
+        id="task-board"
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
+        <div className={`flex min-h-0 min-w-0 flex-1 gap-3 overflow-x-auto pb-2 ${isPending ? "opacity-80" : ""}`}>
           {columns.map((column) => (
             <TaskColumn
               key={column.id}
@@ -134,6 +156,7 @@ export function TaskBoard({
           ))}
           <NewColumnButton />
         </div>
+        <DragOverlay>{activeTask ? <TaskCardOverlay task={activeTask} /> : null}</DragOverlay>
       </DndContext>
       <TaskDetailSheet
         task={openTask}

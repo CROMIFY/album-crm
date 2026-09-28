@@ -68,7 +68,7 @@ export function TaskColumn({
   }
 
   return (
-    <div className="flex w-72 shrink-0 flex-col gap-2">
+    <div className="flex min-h-0 w-72 shrink-0 flex-col gap-2">
       <div className="flex items-center justify-between px-1">
         {editing ? (
           <Input
@@ -113,7 +113,7 @@ export function TaskColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-24 flex-1 flex-col gap-2 rounded-lg border bg-muted/30 p-2 transition-colors",
+          "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-2 transition-colors",
           isOver && "bg-accent border-accent-foreground/20"
         )}
       >

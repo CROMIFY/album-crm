@@ -41,6 +41,7 @@ export function QuickAddTask({ columnId }: { columnId: string }) {
         onBlur={handleCreate}
         onKeyDown={(e) => e.key === "Enter" && handleCreate()}
         disabled={loading}
+        className="shrink-0"
       />
     );
   }
@@ -49,7 +50,7 @@ export function QuickAddTask({ columnId }: { columnId: string }) {
     <Button
       variant="ghost"
       size="sm"
-      className="text-muted-foreground justify-start"
+      className="text-muted-foreground shrink-0 justify-start"
       onClick={() => setEditing(true)}
     >
       <Plus />
