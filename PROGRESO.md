@@ -28,3 +28,16 @@ No hubo transacción única: la API REST no la permite; se aplicó en orden y se
 - Ninguna abierta con fecha vencida; 5 con fecha ≤ 6-oct (avisarán mañana).
 
 ESTADO PARA JARVIS: tarjetas de Cromify cargadas el 2026-10-05, 33 creadas, 34 actualizadas, 34 ya existentes (las mismas que se actualizaron), 7 cerradas
+
+## 2026-10-06 — Tablero actualizado con los últimos cambios y tareas de Jaime
+
+Escrito directamente en la base en una sola transacción (bloque DO con guardas y comprobaciones finales, vía `supabase db query --linked`), sin createTask/updateTask, sin tocar notification_log y sin borrar tarjetas. Copia previa en `Proyectos/backup-tablero-6oct.json`. Verificado después contra esa copia: ningún cambio fuera de lo planificado.
+
+- Cerrada: «Decidir el chat: moderar o apagarlo (menores)». Decisión tomada (chat apagado); la ejecución sigue en una tarjeta nueva porque las ramas están sin push ni merge.
+- 10 modificadas: 5 con notas del 6-oct (APK nuevo en la checklist, pack de bienvenida, 11 de la semana, Firebase/FCM ya hecho, calendario de la prueba cerrada) y 5 reasignadas a Jaime, con fechas nuevas en las dos primeras (seguridad en producción, probabilidades, Sentry del panel, BBDD, almacenamiento de vídeo).
+- 12 creadas: 3 por los últimos cambios (subir y mergear el chat apagado y retirar jugador, reactivar el chat, puntos abiertos de retirar jugador) y 9 para Jaime (Render y variables, formularios de Play, información previa y consentimiento de compra, aceptación de condiciones, compras de menores, copias de seguridad, desistimiento, plantillas privadas, mantenimiento de Dependabot).
+- Tablero: 117 tarjetas. Por pensar 31, Esta quincena 40, En curso 0, Bloqueado 3, Por probar 4, Hecho 39. Abiertas: Lander 33, Jaime 25, Pablo 9, 17 sin dueño.
+- Ninguna abierta con fecha vencida; 2 vencen hoy (6-oct). Jaime se entera por el recordatorio del cron de mañana, no por el email de asignación: avisarle.
+- Aviso de calendario: 14 días de prueba cerrada empezando el 10-oct acaban el 24-oct, no el 19 (anotado en «Despliegue en Apple Store y Google Play»).
+
+ESTADO PARA JARVIS: tablero actualizado el 2026-10-06, 1 cerrada, 10 modificadas, 12 creadas
