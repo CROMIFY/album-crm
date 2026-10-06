@@ -1,5 +1,22 @@
 # PROGRESO
 
+## 2026-10-06 (noche) — Tablero: tarjeta del chat apagado al día
+
+Escrito directamente en la base (transacción con guardas), sin
+createTask/updateTask y sin tocar `notification_log`. Copia previa en
+`Proyectos/backup-tablero-6oct-noche.json`. Verificado: 119 tarjetas y solo
+cambió la descripción de «Subir y mergear el chat apagado y retirar jugador…».
+Ahora dice que las ramas están en develop, la API desplegada en producción
+(`main` 54a28cd, sin copia de seguridad por decisión de Lander, 0 `activo=False`,
+migraciones 0049 y 0050 aplicadas, `config/` y chat verificados) y que falta
+probar el APK y «Retirar jugador» en el admin.
+
+Además, el 6-oct se mergearon a mano en `master` las PRs de Dependabot #8
+(sharp), #9 (js-yaml), #10 (undici) y #11 (ip-address); el CRM respondió 200
+después. La PR #1 de album-app (Expo 57) sigue sin mergear.
+
+ESTADO PARA JARVIS: tablero actualizado el 2026-10-06 (noche), 1 tarjeta modificada, 119 tarjetas
+
 ## 2026-10-06 (tarde) — Tablero: carta a «Por probar», chat apagado actualizado y dos tarjetas nuevas
 
 Escrito directamente en la base en una sola transacción (bloque DO con
