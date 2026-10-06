@@ -1,5 +1,30 @@
 # PROGRESO
 
+## 2026-10-06 (tarde) — Tablero: carta a «Por probar», chat apagado actualizado y dos tarjetas nuevas
+
+Escrito directamente en la base en una sola transacción (bloque DO con
+guardas y comprobaciones finales, vía `supabase db query --linked`), sin
+createTask/updateTask (no se mandó ningún email) y sin tocar
+`notification_log` (356 filas, ninguna nueva). Copias en
+`Proyectos/backup-tablero-6oct-tarde.json` (antes) y
+`backup-tablero-6oct-tarde-despues.json` (después). Verificado contra la copia:
+solo cambian las dos tarjetas previstas y aparecen dos nuevas.
+
+- «La carta no va fluida…»: de Esta quincena a **Por probar**, con la nota
+  «Arreglada en develop (dd448fb). Cerrar cuando Lander la pruebe en el APK.»
+- «Subir y mergear el chat apagado…»: descripción actualizada con la verdad de
+  hoy: ramas en GitHub y mergeadas en develop (API PR #11, app PR #14), **API
+  sin desplegar** (faltan contar `activo=False` en prod, copia de seguridad y
+  OK de Lander), falta probar el APK.
+- Nueva, Esta quincena, Lander, vence 2026-10-08: «Probar APK de develop…».
+- Nueva, Por pensar, sin fecha ni dueño: foto del jugador retirado pública
+  hasta el borrado definitivo y «Borrar todos»/vaciar sin borrar en Cloudinary.
+- Tablero: 119 tarjetas. Por pensar 32, Esta quincena 40, En curso 0,
+  Bloqueado 3, Por probar 5, Hecho 39.
+- Ojo: la fecha «10-08» se ha entendido como 8 de octubre (mes-día).
+
+ESTADO PARA JARVIS: tablero actualizado el 2026-10-06 (tarde), 2 modificadas, 2 creadas, 119 tarjetas
+
 ## 2026-10-02 — Auditoría del tablero de tareas (solo lectura)
 
 Revisión del estado del tablero antes de cargar tareas nuevas. Solo lectura: no
