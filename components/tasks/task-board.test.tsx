@@ -3,6 +3,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSyncExternalStore } from "react";
 import { TaskBoard } from "./task-board";
+import type { ColumnPrefs } from "@/lib/tasks/columns";
 import type { BoardColumnRow, LabelRow, ProfileRow, TaskWithRelations } from "@/lib/types";
 
 // Next enlaza history.replaceState con useSearchParams; aquí se imita con un
@@ -88,15 +89,27 @@ function buildTasks(): TaskWithRelations[] {
   ];
 }
 
-function renderBoard() {
+function renderBoard({
+  boardColumns = columns,
+  tasks = buildTasks(),
+  currentUserId = null,
+  columnPrefs = {},
+}: {
+  boardColumns?: BoardColumnRow[];
+  tasks?: TaskWithRelations[];
+  currentUserId?: string | null;
+  columnPrefs?: ColumnPrefs;
+} = {}) {
   return render(
     <TaskBoard
-      columns={columns}
-      tasks={buildTasks()}
+      columns={boardColumns}
+      tasks={tasks}
       labels={labels}
       profiles={profiles}
       accounts={[]}
       today={TODAY}
+      currentUserId={currentUserId}
+      columnPrefs={columnPrefs}
     />
   );
 }
@@ -269,5 +282,120 @@ describe("TaskBoard: filtros y orden", () => {
     renderBoard();
     const header = screen.getByText("Por hacer", { selector: "button" }).closest("div.w-72") as HTMLElement;
     expect(within(header).getByText("1/4")).toBeInTheDocument();
+  });
+});
+
+describe("TaskBoard: «Mis tareas»", () => {
+  it("filtra por quien mira el tablero y se quita con el mismo botón", async () => {
+    const user = userEvent.setup();
+    renderBoard({ currentUserId: lander.id });
+    const mine = screen.getByRole("button", { name: "Mis tareas" });
+    expect(mine).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(mine);
+    expect(mine).toHaveAttribute("aria-pressed", "true");
+    expect(window.location.search).toBe(`?usuario=${lander.id}`);
+    expect(titlesIn("Por hacer")).toEqual(["Subir el AAB"]);
+    expect(titlesIn("En curso")).toEqual(["Pulir el login"]);
+
+    await user.click(mine);
+    expect(mine).toHaveAttribute("aria-pressed", "false");
+    expect(window.location.search).toBe("");
+    expect(titlesIn("Por hacer")).toEqual(["Subir el AAB", "Revisar contrato", "Probar compras", "Idea suelta"]);
+  });
+
+  it("sale activo con un enlace que filtra solo por mí, y no si hay más usuarios", () => {
+    setUrl(`?usuario=${lander.id}`);
+    const { unmount } = renderBoard({ currentUserId: lander.id });
+    expect(screen.getByRole("button", { name: "Mis tareas" })).toHaveAttribute("aria-pressed", "true");
+    unmount();
+
+    setUrl(`?usuario=${lander.id},${jaime.id}`);
+    renderBoard({ currentUserId: lander.id });
+    expect(screen.getByRole("button", { name: "Mis tareas" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("con otros usuarios elegidos, los cambia por «solo yo»", async () => {
+    const user = userEvent.setup();
+    setUrl(`?usuario=${jaime.id}&prioridad=alta`);
+    renderBoard({ currentUserId: lander.id });
+
+    await user.click(screen.getByRole("button", { name: "Mis tareas" }));
+    expect(window.location.search).toBe(`?usuario=${lander.id}&prioridad=alta`);
+  });
+
+  it("sin sesión conocida no aparece", () => {
+    renderBoard();
+    expect(screen.queryByRole("button", { name: "Mis tareas" })).not.toBeInTheDocument();
+  });
+});
+
+describe("TaskBoard: columnas plegadas", () => {
+  const fullColumns: BoardColumnRow[] = [
+    { id: "c-ideas", name: "Por pensar", position: 0, is_done_column: false, created_at: "" },
+    { id: "c-todo", name: "Por hacer", position: 1, is_done_column: false, created_at: "" },
+    { id: "c-done", name: "Hecho", position: 2, is_done_column: true, created_at: "" },
+  ];
+
+  function fullTasks(): TaskWithRelations[] {
+    position = 0;
+    return [
+      task("Idea para después", { column_id: "c-ideas", assignees: [jaime] }),
+      task("Subir el AAB", { assignees: [lander] }),
+      task("Contrato firmado", { column_id: "c-done", assignees: [lander] }),
+      task("Logo nuevo", { column_id: "c-done", assignees: [jaime] }),
+    ];
+  }
+
+  function cardTitles(): string[] {
+    return Array.from(document.querySelectorAll("[data-slot=card] span.text-sm")).map((el) => el.textContent ?? "");
+  }
+
+  function strip(columnName: string): HTMLElement {
+    return screen.getByRole("button", { name: `Desplegar la columna ${columnName}` }).parentElement as HTMLElement;
+  }
+
+  beforeEach(() => {
+    document.cookie = "tareas_columnas=; path=/tareas; max-age=0";
+  });
+
+  it("«Por pensar» y la columna de hecho salen plegadas, con su número; las demás no", () => {
+    renderBoard({ boardColumns: fullColumns, tasks: fullTasks() });
+
+    expect(cardTitles()).toEqual(["Subir el AAB"]);
+    expect(within(strip("Por pensar")).getByText("1")).toBeInTheDocument();
+    expect(within(strip("Hecho")).getByText("2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Plegar la columna Por hacer" })).toBeInTheDocument();
+  });
+
+  it("plegada, el número respeta los filtros", () => {
+    setUrl(`?usuario=${jaime.id}`);
+    renderBoard({ boardColumns: fullColumns, tasks: fullTasks() });
+    expect(within(strip("Hecho")).getByText("1/2")).toBeInTheDocument();
+  });
+
+  it("desplegar y plegar a mano cambia el tablero y lo guarda en la cookie", async () => {
+    const user = userEvent.setup();
+    renderBoard({ boardColumns: fullColumns, tasks: fullTasks() });
+
+    await user.click(screen.getByRole("button", { name: "Desplegar la columna Hecho" }));
+    expect(cardTitles()).toEqual(["Subir el AAB", "Contrato firmado", "Logo nuevo"]);
+    expect(document.cookie).toContain("tareas_columnas=c-done:0");
+
+    await user.click(screen.getByRole("button", { name: "Plegar la columna Por hacer" }));
+    expect(cardTitles()).toEqual(["Contrato firmado", "Logo nuevo"]);
+    expect(document.cookie).toContain("tareas_columnas=c-done:0.c-todo:1");
+
+    // También se despliega pulsando el nombre de la tira.
+    await user.click(screen.getByText("Por hacer", { selector: "button" }));
+    expect(cardTitles()).toEqual(["Subir el AAB", "Contrato firmado", "Logo nuevo"]);
+  });
+
+  it("respeta lo que ya estaba guardado", () => {
+    renderBoard({ boardColumns: fullColumns, tasks: fullTasks(), columnPrefs: { "c-done": false, "c-todo": true } });
+
+    expect(cardTitles()).toEqual(["Contrato firmado", "Logo nuevo"]);
+    expect(screen.getByRole("button", { name: "Desplegar la columna Por hacer" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Desplegar la columna Por pensar" })).toBeInTheDocument();
   });
 });

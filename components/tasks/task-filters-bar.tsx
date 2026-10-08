@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpDown, CalendarDays, ChevronDown, Flag, RotateCcw, Tags, Users } from "lucide-react";
+import { ArrowUpDown, CalendarDays, ChevronDown, Flag, RotateCcw, Tags, UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -195,6 +195,7 @@ export function TaskFiltersBar({
   onChange,
   profiles,
   labels,
+  currentUserId,
   visibleCount,
   totalCount,
 }: {
@@ -202,14 +203,29 @@ export function TaskFiltersBar({
   onChange: (next: TaskFilters) => void;
   profiles: ProfileRow[];
   labels: LabelRow[];
+  currentUserId: string | null;
   visibleCount: number;
   totalCount: number;
 }) {
   const activeCount = countActiveFilters(filters);
   const dirty = activeCount > 0 || filters.sort !== "manual";
+  // Atajo del filtro de usuario: activo solo si el filtro es exactamente «yo».
+  const onlyMine = currentUserId !== null && filters.assignees.length === 1 && filters.assignees[0] === currentUserId;
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2" role="toolbar" aria-label="Filtros y orden de las tareas">
+      {currentUserId && (
+        <Button
+          variant="outline"
+          size="sm"
+          aria-pressed={onlyMine}
+          className={triggerClass(onlyMine)}
+          onClick={() => onChange({ ...filters, assignees: onlyMine ? [] : [currentUserId] })}
+        >
+          <UserRound />
+          Mis tareas
+        </Button>
+      )}
       <MultiFilter
         label="Usuario"
         icon={<Users />}

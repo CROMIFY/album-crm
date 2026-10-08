@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { MoreHorizontal } from "lucide-react";
+import { FoldHorizontal, MoreHorizontal, UnfoldHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { TaskCard } from "@/components/tasks/task-card";
@@ -25,6 +25,8 @@ export function TaskColumn({
   tasks,
   totalCount,
   filtered,
+  collapsed,
+  onToggleCollapsed,
   onOpenTask,
 }: {
   column: BoardColumnRow;
@@ -33,6 +35,9 @@ export function TaskColumn({
   /** Cuántas tiene la columna en total, con o sin filtros. */
   totalCount: number;
   filtered: boolean;
+  /** Plegada: una tira estrecha con el nombre y el número; se puede soltar una tarjeta encima. */
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   onOpenTask: (task: TaskWithRelations) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
@@ -73,6 +78,46 @@ export function TaskColumn({
     }
   }
 
+  const count = (
+    <span
+      className="text-muted-foreground text-xs tabular-nums"
+      title={filtered ? `${tasks.length} de ${totalCount} tareas con los filtros actuales` : undefined}
+    >
+      {filtered ? `${tasks.length}/${totalCount}` : tasks.length}
+    </span>
+  );
+
+  if (collapsed) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "flex w-10 shrink-0 flex-col items-center gap-2 rounded-lg border bg-muted/30 py-2 transition-colors",
+          isOver && "bg-accent border-accent-foreground/20"
+        )}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          aria-label={`Desplegar la columna ${column.name}`}
+          aria-expanded={false}
+          onClick={onToggleCollapsed}
+        >
+          <UnfoldHorizontal className="h-3.5 w-3.5" />
+        </Button>
+        {count}
+        <button
+          className="text-sm font-medium whitespace-nowrap hover:underline [writing-mode:vertical-rl]"
+          tabIndex={-1}
+          onClick={onToggleCollapsed}
+        >
+          {column.name}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 w-72 shrink-0 flex-col gap-2">
       <div className="flex items-center justify-between px-1">
@@ -94,12 +139,17 @@ export function TaskColumn({
           </button>
         )}
         <div className="flex items-center gap-1">
-          <span
-            className="text-muted-foreground text-xs tabular-nums"
-            title={filtered ? `${tasks.length} de ${totalCount} tareas con los filtros actuales` : undefined}
+          {count}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            aria-label={`Plegar la columna ${column.name}`}
+            aria-expanded
+            onClick={onToggleCollapsed}
           >
-            {filtered ? `${tasks.length}/${totalCount}` : tasks.length}
-          </span>
+            <FoldHorizontal className="h-3.5 w-3.5" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">

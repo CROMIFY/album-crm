@@ -31,6 +31,7 @@ import {
   sortTasks,
   type TaskFilters,
 } from "@/lib/tasks/filters";
+import { isColumnCollapsed, saveColumnPrefs, type ColumnPrefs } from "@/lib/tasks/columns";
 import type { AccountRow, BoardColumnRow, LabelRow, ProfileRow, TaskWithRelations } from "@/lib/types";
 
 type MoveAction = { taskId: string; columnId: string; orderedIds: string[] };
@@ -42,6 +43,8 @@ export function TaskBoard({
   profiles,
   accounts,
   today,
+  currentUserId,
+  columnPrefs: initialColumnPrefs,
 }: {
   columns: BoardColumnRow[];
   tasks: TaskWithRelations[];
@@ -50,10 +53,15 @@ export function TaskBoard({
   accounts: AccountRow[];
   /** YYYY-MM-DD en hora de Madrid; lo calcula el servidor para que coincida al hidratar. */
   today: string;
+  /** Perfil de quien mira el tablero (para «Mis tareas»). */
+  currentUserId: string | null;
+  /** Columnas plegadas o desplegadas a mano en este navegador (cookie leída en el servidor). */
+  columnPrefs: ColumnPrefs;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [columnPrefs, setColumnPrefs] = useState(initialColumnPrefs);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [optimisticTasks, moveTask] = useOptimistic(
@@ -77,6 +85,13 @@ export function TaskBoard({
   function handleFiltersChange(next: TaskFilters) {
     const qs = serializeFilters(next, new URLSearchParams(searchParams.toString())).toString();
     window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  // Plegar o desplegar a mano queda guardado en una cookie de este navegador.
+  function toggleColumn(column: BoardColumnRow) {
+    const next = { ...columnPrefs, [column.id]: !isColumnCollapsed(column, columnPrefs) };
+    setColumnPrefs(next);
+    saveColumnPrefs(next);
   }
 
   // Todas las tareas de cada columna en orden manual: es lo que se guarda al arrastrar,
@@ -194,6 +209,7 @@ export function TaskBoard({
           onChange={handleFiltersChange}
           profiles={profiles}
           labels={labels}
+          currentUserId={currentUserId}
           visibleCount={visibleCount}
           totalCount={totalCount}
         />
@@ -213,6 +229,8 @@ export function TaskBoard({
               tasks={visibleByColumn.get(column.id) ?? []}
               totalCount={tasksByColumn.get(column.id)?.length ?? 0}
               filtered={activeFilterCount > 0}
+              collapsed={isColumnCollapsed(column, columnPrefs)}
+              onToggleCollapsed={() => toggleColumn(column)}
               onOpenTask={(task) => setOpenTaskId(task.id)}
             />
           ))}
