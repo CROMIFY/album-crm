@@ -23,10 +23,16 @@ import type { BoardColumnRow, TaskWithRelations } from "@/lib/types";
 export function TaskColumn({
   column,
   tasks,
+  totalCount,
+  filtered,
   onOpenTask,
 }: {
   column: BoardColumnRow;
+  /** Las tareas que se pintan (ya filtradas y ordenadas). */
   tasks: TaskWithRelations[];
+  /** Cuántas tiene la columna en total, con o sin filtros. */
+  totalCount: number;
+  filtered: boolean;
   onOpenTask: (task: TaskWithRelations) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
@@ -88,7 +94,12 @@ export function TaskColumn({
           </button>
         )}
         <div className="flex items-center gap-1">
-          <span className="text-muted-foreground text-xs tabular-nums">{tasks.length}</span>
+          <span
+            className="text-muted-foreground text-xs tabular-nums"
+            title={filtered ? `${tasks.length} de ${totalCount} tareas con los filtros actuales` : undefined}
+          >
+            {filtered ? `${tasks.length}/${totalCount}` : tasks.length}
+          </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
