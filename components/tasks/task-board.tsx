@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -18,8 +19,18 @@ import { NewColumnButton } from "@/components/tasks/new-column-button";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { ManageLabelsDialog } from "@/components/tasks/manage-labels-dialog";
 import { TaskDetailSheet } from "@/components/tasks/task-detail-sheet";
+import { TaskFiltersBar } from "@/components/tasks/task-filters-bar";
 import { HeaderPortal } from "@/components/header-portal";
 import { reorderTask } from "@/lib/actions/tasks";
+import {
+  SORT_OPTIONS,
+  countActiveFilters,
+  filterTasks,
+  parseFilters,
+  serializeFilters,
+  sortTasks,
+  type TaskFilters,
+} from "@/lib/tasks/filters";
 import type { AccountRow, BoardColumnRow, LabelRow, ProfileRow, TaskWithRelations } from "@/lib/types";
 
 type MoveAction = { taskId: string; columnId: string; orderedIds: string[] };
@@ -30,13 +41,18 @@ export function TaskBoard({
   labels,
   profiles,
   accounts,
+  today,
 }: {
   columns: BoardColumnRow[];
   tasks: TaskWithRelations[];
   labels: LabelRow[];
   profiles: ProfileRow[];
   accounts: AccountRow[];
+  /** YYYY-MM-DD en hora de Madrid; lo calcula el servidor para que coincida al hidratar. */
+  today: string;
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -54,6 +70,17 @@ export function TaskBoard({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
+  // Los filtros viven en la URL (la vista se puede compartir y sobrevive a recargar).
+  // replaceState en vez de router.replace: no hace falta volver a pedir el tablero al servidor.
+  const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
+
+  function handleFiltersChange(next: TaskFilters) {
+    const qs = serializeFilters(next, new URLSearchParams(searchParams.toString())).toString();
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  // Todas las tareas de cada columna en orden manual: es lo que se guarda al arrastrar,
+  // aunque haya filtros u otro orden en pantalla.
   const tasksByColumn = useMemo(() => {
     const map = new Map<string, TaskWithRelations[]>();
     for (const column of columns) map.set(column.id, []);
@@ -65,6 +92,22 @@ export function TaskBoard({
     }
     return map;
   }, [columns, optimisticTasks]);
+
+  // Lo que se pinta: la lista completa de cada columna, filtrada y ordenada.
+  const visibleByColumn = useMemo(() => {
+    const map = new Map<string, TaskWithRelations[]>();
+    for (const [columnId, list] of tasksByColumn) {
+      map.set(columnId, sortTasks(filterTasks(list, filters, today), filters.sort));
+    }
+    return map;
+  }, [tasksByColumn, filters, today]);
+
+  const activeFilterCount = countActiveFilters(filters);
+  const totalCount = optimisticTasks.length;
+  const visibleCount = useMemo(
+    () => Array.from(visibleByColumn.values()).reduce((sum, list) => sum + list.length, 0),
+    [visibleByColumn]
+  );
 
   const openTask = optimisticTasks.find((t) => t.id === openTaskId) ?? null;
   const activeTask = activeId ? (optimisticTasks.find((t) => t.id === activeId) ?? null) : null;
@@ -105,6 +148,13 @@ export function TaskBoard({
         ? sourceColumnTasks.findIndex((t) => t.id === String(over.id))
         : sourceColumnTasks.length - 1;
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      if (filters.sort !== "manual") {
+        const sortLabel = SORT_OPTIONS.find((o) => o.value === filters.sort)?.label;
+        toast.info("No se puede reordenar con un orden activo", {
+          description: `Ahora se ordena por «${sortLabel}». Cambia a «Orden manual» para colocar las tarjetas a mano.`,
+        });
+        return;
+      }
       orderedIds = arrayMove(sourceColumnTasks, oldIndex, newIndex).map((t) => t.id);
     } else {
       const withoutMoved = targetColumnTasks.filter((t) => t.id !== taskId);
@@ -137,7 +187,17 @@ export function TaskBoard({
         <ManageLabelsDialog labels={labels} usageCounts={labelUsageCounts} />
         <NewTaskDialog columns={columns} labels={labels} profiles={profiles} />
       </HeaderPortal>
-      <h1 className="shrink-0 text-lg font-semibold">Tareas</h1>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+        <h1 className="text-lg font-semibold">Tareas</h1>
+        <TaskFiltersBar
+          filters={filters}
+          onChange={handleFiltersChange}
+          profiles={profiles}
+          labels={labels}
+          visibleCount={visibleCount}
+          totalCount={totalCount}
+        />
+      </div>
       <DndContext
         id="task-board"
         sensors={sensors}
@@ -150,7 +210,9 @@ export function TaskBoard({
             <TaskColumn
               key={column.id}
               column={column}
-              tasks={tasksByColumn.get(column.id) ?? []}
+              tasks={visibleByColumn.get(column.id) ?? []}
+              totalCount={tasksByColumn.get(column.id)?.length ?? 0}
+              filtered={activeFilterCount > 0}
               onOpenTask={(task) => setOpenTaskId(task.id)}
             />
           ))}

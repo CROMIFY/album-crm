@@ -1,5 +1,47 @@
 # PROGRESO
 
+## 2026-10-06 (noche) — Tablero: tarjeta del chat apagado al día
+
+Escrito directamente en la base (transacción con guardas), sin
+createTask/updateTask y sin tocar `notification_log`. Copia previa en
+`Proyectos/backup-tablero-6oct-noche.json`. Verificado: 119 tarjetas y solo
+cambió la descripción de «Subir y mergear el chat apagado y retirar jugador…».
+Ahora dice que las ramas están en develop, la API desplegada en producción
+(`main` 54a28cd, sin copia de seguridad por decisión de Lander, 0 `activo=False`,
+migraciones 0049 y 0050 aplicadas, `config/` y chat verificados) y que falta
+probar el APK y «Retirar jugador» en el admin.
+
+Además, el 6-oct se mergearon a mano en `master` las PRs de Dependabot #8
+(sharp), #9 (js-yaml), #10 (undici) y #11 (ip-address); el CRM respondió 200
+después. La PR #1 de album-app (Expo 57) sigue sin mergear.
+
+ESTADO PARA JARVIS: tablero actualizado el 2026-10-06 (noche), 1 tarjeta modificada, 119 tarjetas
+
+## 2026-10-06 (tarde) — Tablero: carta a «Por probar», chat apagado actualizado y dos tarjetas nuevas
+
+Escrito directamente en la base en una sola transacción (bloque DO con
+guardas y comprobaciones finales, vía `supabase db query --linked`), sin
+createTask/updateTask (no se mandó ningún email) y sin tocar
+`notification_log` (356 filas, ninguna nueva). Copias en
+`Proyectos/backup-tablero-6oct-tarde.json` (antes) y
+`backup-tablero-6oct-tarde-despues.json` (después). Verificado contra la copia:
+solo cambian las dos tarjetas previstas y aparecen dos nuevas.
+
+- «La carta no va fluida…»: de Esta quincena a **Por probar**, con la nota
+  «Arreglada en develop (dd448fb). Cerrar cuando Lander la pruebe en el APK.»
+- «Subir y mergear el chat apagado…»: descripción actualizada con la verdad de
+  hoy: ramas en GitHub y mergeadas en develop (API PR #11, app PR #14), **API
+  sin desplegar** (faltan contar `activo=False` en prod, copia de seguridad y
+  OK de Lander), falta probar el APK.
+- Nueva, Esta quincena, Lander, vence 2026-10-08: «Probar APK de develop…».
+- Nueva, Por pensar, sin fecha ni dueño: foto del jugador retirado pública
+  hasta el borrado definitivo y «Borrar todos»/vaciar sin borrar en Cloudinary.
+- Tablero: 119 tarjetas. Por pensar 32, Esta quincena 40, En curso 0,
+  Bloqueado 3, Por probar 5, Hecho 39.
+- Ojo: la fecha «10-08» se ha entendido como 8 de octubre (mes-día).
+
+ESTADO PARA JARVIS: tablero actualizado el 2026-10-06 (tarde), 2 modificadas, 2 creadas, 119 tarjetas
+
 ## 2026-10-02 — Auditoría del tablero de tareas (solo lectura)
 
 Revisión del estado del tablero antes de cargar tareas nuevas. Solo lectura: no
@@ -28,3 +70,16 @@ No hubo transacción única: la API REST no la permite; se aplicó en orden y se
 - Ninguna abierta con fecha vencida; 5 con fecha ≤ 6-oct (avisarán mañana).
 
 ESTADO PARA JARVIS: tarjetas de Cromify cargadas el 2026-10-05, 33 creadas, 34 actualizadas, 34 ya existentes (las mismas que se actualizaron), 7 cerradas
+
+## 2026-10-06 — Tablero actualizado con los últimos cambios y tareas de Jaime
+
+Escrito directamente en la base en una sola transacción (bloque DO con guardas y comprobaciones finales, vía `supabase db query --linked`), sin createTask/updateTask, sin tocar notification_log y sin borrar tarjetas. Copia previa en `Proyectos/backup-tablero-6oct.json`. Verificado después contra esa copia: ningún cambio fuera de lo planificado.
+
+- Cerrada: «Decidir el chat: moderar o apagarlo (menores)». Decisión tomada (chat apagado); la ejecución sigue en una tarjeta nueva porque las ramas están sin push ni merge.
+- 10 modificadas: 5 con notas del 6-oct (APK nuevo en la checklist, pack de bienvenida, 11 de la semana, Firebase/FCM ya hecho, calendario de la prueba cerrada) y 5 reasignadas a Jaime, con fechas nuevas en las dos primeras (seguridad en producción, probabilidades, Sentry del panel, BBDD, almacenamiento de vídeo).
+- 12 creadas: 3 por los últimos cambios (subir y mergear el chat apagado y retirar jugador, reactivar el chat, puntos abiertos de retirar jugador) y 9 para Jaime (Render y variables, formularios de Play, información previa y consentimiento de compra, aceptación de condiciones, compras de menores, copias de seguridad, desistimiento, plantillas privadas, mantenimiento de Dependabot).
+- Tablero: 117 tarjetas. Por pensar 31, Esta quincena 40, En curso 0, Bloqueado 3, Por probar 4, Hecho 39. Abiertas: Lander 33, Jaime 25, Pablo 9, 17 sin dueño.
+- Ninguna abierta con fecha vencida; 2 vencen hoy (6-oct). Jaime se entera por el recordatorio del cron de mañana, no por el email de asignación: avisarle.
+- Aviso de calendario: 14 días de prueba cerrada empezando el 10-oct acaban el 24-oct, no el 19 (anotado en «Despliegue en Apple Store y Google Play»).
+
+ESTADO PARA JARVIS: tablero actualizado el 2026-10-06, 1 cerrada, 10 modificadas, 12 creadas
