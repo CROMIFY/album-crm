@@ -4,6 +4,7 @@ import type {
   BoardColumnRow,
   LabelRow,
   ProfileRow,
+  SprintRow,
   SubtaskRow,
   TaskWithRelations,
 } from "@/lib/types";
@@ -11,8 +12,14 @@ import type {
 export async function fetchBoard() {
   const supabase = await createClient();
 
-  const [{ data: columns }, { data: rawTasks }, { data: labels }, { data: profiles }, { data: accounts }] =
-    await Promise.all([
+  const [
+    { data: columns },
+    { data: rawTasks },
+    { data: labels },
+    { data: profiles },
+    { data: accounts },
+    { data: sprints },
+  ] = await Promise.all([
       supabase.from("board_columns").select("*").order("position", { ascending: true }),
       supabase
         .from("tasks")
@@ -23,6 +30,8 @@ export async function fetchBoard() {
       supabase.from("labels").select("*"),
       supabase.from("profiles").select("*"),
       supabase.from("accounts").select("*"),
+      // Sin la migración 0016 esta consulta falla y el tablero sigue sin sprints.
+      supabase.from("sprints").select("*").order("starts_on", { ascending: true }),
     ]);
 
   type RawTask = TaskWithRelations & {
@@ -43,5 +52,6 @@ export async function fetchBoard() {
     labels: (labels ?? []) as LabelRow[],
     profiles: (profiles ?? []) as ProfileRow[],
     accounts: (accounts ?? []) as AccountRow[],
+    sprints: (sprints ?? []) as SprintRow[],
   };
 }

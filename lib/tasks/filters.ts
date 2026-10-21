@@ -4,6 +4,9 @@ import type { TaskPriority, TaskWithRelations } from "@/lib/types";
 // "sin etiqueta".
 export const NONE = "none";
 
+// Valor del filtro de sprint que sigue al sprint en marcha (o al próximo).
+export const CURRENT_SPRINT = "actual";
+
 export type DueFilter = "vencidas" | "hoy" | "semana" | "sin-fecha" | "rango";
 
 export const DUE_FILTER_LABELS: Record<Exclude<DueFilter, "rango">, string> = {
@@ -37,6 +40,8 @@ export type TaskFilters = {
   // Solo cuentan con due === "rango"; formato YYYY-MM-DD, ambos extremos incluidos.
   from: string | null;
   to: string | null;
+  /** Id de un sprint, CURRENT_SPRINT o NONE (tareas sin sprint). */
+  sprint: string | null;
   sort: SortOption;
 };
 
@@ -47,6 +52,7 @@ export const EMPTY_FILTERS: TaskFilters = {
   due: null,
   from: null,
   to: null,
+  sprint: null,
   sort: "manual",
 };
 
@@ -63,6 +69,7 @@ const PARAM = {
   due: "fecha",
   from: "desde",
   to: "hasta",
+  sprint: "sprint",
   sort: "orden",
 } as const;
 
@@ -90,6 +97,7 @@ export function parseFilters(params: { get(name: string): string | null }): Task
     due: validDue,
     from: validDue === "rango" ? readDate(params, PARAM.from) : null,
     to: validDue === "rango" ? readDate(params, PARAM.to) : null,
+    sprint: params.get(PARAM.sprint) || null,
     sort: sort && SORT_VALUES.includes(sort) ? (sort as SortOption) : "manual",
   };
 }
@@ -108,6 +116,7 @@ export function serializeFilters(filters: TaskFilters, base?: URLSearchParams): 
       if (filters.to) params.set(PARAM.to, filters.to);
     }
   }
+  if (filters.sprint) params.set(PARAM.sprint, filters.sprint);
   if (filters.sort !== "manual") params.set(PARAM.sort, filters.sort);
   return params;
 }
@@ -124,7 +133,8 @@ export function countActiveFilters(filters: TaskFilters): number {
     (filters.assignees.length ? 1 : 0) +
     (filters.labels.length ? 1 : 0) +
     (filters.priorities.length ? 1 : 0) +
-    (dueIsActive(filters) ? 1 : 0)
+    (dueIsActive(filters) ? 1 : 0) +
+    (filters.sprint ? 1 : 0)
   );
 }
 
@@ -165,16 +175,23 @@ function matchesDue(task: TaskWithRelations, filters: TaskFilters, today: string
   }
 }
 
+/** El sprint que pide el filtro: CURRENT_SPRINT se traduce al id del sprint actual (null si no hay). */
+function sprintToMatch(filters: TaskFilters, currentSprintId: string | null): string | null {
+  return filters.sprint === CURRENT_SPRINT ? currentSprintId : filters.sprint;
+}
+
 /** Entre categorías se exige cumplir todas (Y); dentro de una categoría basta con una (O). */
 export function filterTasks(
   tasks: TaskWithRelations[],
   filters: TaskFilters,
-  today: string
+  today: string,
+  currentSprintId: string | null = null
 ): TaskWithRelations[] {
   if (countActiveFilters(filters) === 0) return tasks;
   const assignees = new Set(filters.assignees);
   const labels = new Set(filters.labels);
   const priorities = new Set<TaskPriority>(filters.priorities);
+  const sprint = sprintToMatch(filters, currentSprintId);
 
   return tasks.filter((task) => {
     if (assignees.size) {
@@ -190,6 +207,13 @@ export function filterTasks(
     }
     if (priorities.size && !priorities.has(task.priority)) return false;
     if (dueIsActive(filters) && !matchesDue(task, filters, today)) return false;
+    if (filters.sprint) {
+      // Sin la migración de sprints la tarea no trae sprint_id.
+      const taskSprint = task.sprint_id ?? null;
+      // «Sprint actual» sin ningún sprint creado no enseña nada.
+      if (sprint === null) return false;
+      if (sprint === NONE ? taskSprint !== null : taskSprint !== sprint) return false;
+    }
     return true;
   });
 }

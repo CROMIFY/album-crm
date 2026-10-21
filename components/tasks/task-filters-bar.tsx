@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpDown, CalendarDays, ChevronDown, Flag, RotateCcw, Tags, UserRound, Users } from "lucide-react";
+import { ArrowUpDown, CalendarDays, ChevronDown, Flag, RotateCcw, Tags, Target, UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
+  CURRENT_SPRINT,
   DUE_FILTER_LABELS,
   EMPTY_FILTERS,
   NONE,
@@ -24,7 +25,7 @@ import {
   type TaskFilters,
 } from "@/lib/tasks/filters";
 import { cn } from "@/lib/utils";
-import type { LabelRow, ProfileRow, TaskPriority } from "@/lib/types";
+import type { LabelRow, ProfileRow, SprintRow, TaskPriority } from "@/lib/types";
 
 type Option = { value: string; label: string; color?: string };
 
@@ -190,11 +191,49 @@ function DueFilterControl({
   );
 }
 
+// Valor del Select para «sin filtro de sprint» (un Select no admite value vacío).
+const ALL_SPRINTS = "todos";
+
+function SprintFilter({
+  value,
+  onChange,
+  sprints,
+  currentSprint,
+}: {
+  value: string | null;
+  onChange: (next: string | null) => void;
+  sprints: SprintRow[];
+  currentSprint: SprintRow | null;
+}) {
+  return (
+    <Select value={value ?? ALL_SPRINTS} onValueChange={(v) => onChange(v === ALL_SPRINTS ? null : v)}>
+      <SelectTrigger size="sm" aria-label="Filtrar por sprint" className={cn("w-48", triggerClass(value !== null))}>
+        <Target className="text-muted-foreground" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL_SPRINTS}>Todos los sprints</SelectItem>
+        <SelectItem value={CURRENT_SPRINT}>
+          Sprint actual{currentSprint ? ` (${currentSprint.name})` : ""}
+        </SelectItem>
+        {sprints.map((s) => (
+          <SelectItem key={s.id} value={s.id}>
+            {s.name}
+          </SelectItem>
+        ))}
+        <SelectItem value={NONE}>Sin sprint</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function TaskFiltersBar({
   filters,
   onChange,
   profiles,
   labels,
+  sprints = [],
+  currentSprint = null,
   currentUserId,
   visibleCount,
   totalCount,
@@ -203,6 +242,8 @@ export function TaskFiltersBar({
   onChange: (next: TaskFilters) => void;
   profiles: ProfileRow[];
   labels: LabelRow[];
+  sprints?: SprintRow[];
+  currentSprint?: SprintRow | null;
   currentUserId: string | null;
   visibleCount: number;
   totalCount: number;
@@ -250,6 +291,14 @@ export function TaskFiltersBar({
         onChange={(next) => onChange({ ...filters, priorities: next as TaskPriority[] })}
       />
       <DueFilterControl filters={filters} onChange={onChange} />
+      {sprints.length > 0 && (
+        <SprintFilter
+          value={filters.sprint}
+          onChange={(sprint) => onChange({ ...filters, sprint })}
+          sprints={sprints}
+          currentSprint={currentSprint}
+        />
+      )}
 
       <Select value={filters.sort} onValueChange={(sort) => onChange({ ...filters, sort: sort as SortOption })}>
         <SelectTrigger size="sm" aria-label="Ordenar tareas" className={cn("w-52", triggerClass(filters.sort !== "manual"))}>

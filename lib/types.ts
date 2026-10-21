@@ -222,10 +222,23 @@ export type TaskRow = {
   priority: TaskPriority;
   position: number;
   done: boolean;
+  /** Cuándo se completó (lo pone un trigger); null si está abierta o se cerró antes de existir el campo. */
+  done_at: string | null;
+  sprint_id: string | null;
   linked_account_id: string | null;
   linked_deal_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type SprintRow = {
+  id: string;
+  name: string;
+  /** YYYY-MM-DD, ambos días incluidos. */
+  starts_on: string;
+  ends_on: string;
+  goal: string | null;
+  created_at: string;
 };
 
 export type TaskLabelRow = {
@@ -493,11 +506,14 @@ export type Database = {
           | "priority"
           | "position"
           | "done"
+          | "done_at"
+          | "sprint_id"
           | "linked_account_id"
           | "linked_deal_id"
         >,
         Partial<TaskRow>
       >;
+      sprints: Table<SprintRow, Insertable<SprintRow, "goal">, Partial<SprintRow>>;
       task_labels: Table<TaskLabelRow, TaskLabelRow, Partial<TaskLabelRow>>;
       task_assignees: Table<TaskAssigneeRow, TaskAssigneeRow, Partial<TaskAssigneeRow>>;
       subtasks: Table<

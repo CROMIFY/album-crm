@@ -42,19 +42,21 @@ import {
   deleteSubtask,
 } from "@/lib/actions/tasks";
 import { CreateLabelButton } from "@/components/tasks/create-label-button";
-import type { AccountRow, LabelRow, ProfileRow, TaskPriority, TaskWithRelations } from "@/lib/types";
+import type { AccountRow, LabelRow, ProfileRow, SprintRow, TaskPriority, TaskWithRelations } from "@/lib/types";
 
 export function TaskDetailSheet({
   task,
   labels,
   profiles,
   accounts,
+  sprints = [],
   onClose,
 }: {
   task: TaskWithRelations | null;
   labels: LabelRow[];
   profiles: ProfileRow[];
   accounts: AccountRow[];
+  sprints?: SprintRow[];
   onClose: () => void;
 }) {
   const [dirty, setDirty] = useState(false);
@@ -80,6 +82,7 @@ export function TaskDetailSheet({
               labels={labels}
               profiles={profiles}
               accounts={accounts}
+              sprints={sprints}
               onClose={onClose}
               onDirtyChange={setDirty}
             />
@@ -119,6 +122,7 @@ type Draft = {
   dueDate: string;
   assigneeIds: string[];
   linkedAccountId: string;
+  sprintId: string;
 };
 
 function draftFromTask(task: TaskWithRelations): Draft {
@@ -129,6 +133,7 @@ function draftFromTask(task: TaskWithRelations): Draft {
     dueDate: task.due_date ?? "",
     assigneeIds: task.assignees.map((a) => a.id),
     linkedAccountId: task.linked_account_id ?? "none",
+    sprintId: task.sprint_id ?? "none",
   };
 }
 
@@ -141,6 +146,7 @@ function TaskDetailForm({
   labels,
   profiles,
   accounts,
+  sprints,
   onClose,
   onDirtyChange,
 }: {
@@ -148,6 +154,7 @@ function TaskDetailForm({
   labels: LabelRow[];
   profiles: ProfileRow[];
   accounts: AccountRow[];
+  sprints: SprintRow[];
   onClose: () => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
@@ -188,6 +195,10 @@ function TaskDetailForm({
         dueDate: draft.dueDate || null,
         assigneeIds: draft.assigneeIds,
         linkedAccountId: draft.linkedAccountId === "none" ? null : draft.linkedAccountId,
+        // Solo si cambia: sin la migración de sprints la columna no existe.
+        ...(draft.sprintId !== saved.sprintId && {
+          sprintId: draft.sprintId === "none" ? null : draft.sprintId,
+        }),
       });
       setSaved(draft);
       toast.success("Cambios guardados");
@@ -320,6 +331,25 @@ function TaskDetailForm({
             </SelectContent>
           </Select>
         </div>
+
+        {sprints.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs">Sprint</Label>
+            <Select value={draft.sprintId} onValueChange={(v) => set("sprintId", v)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin sprint</SelectItem>
+                {sprints.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <Button onClick={handleSave} disabled={!isDirty || saving} className="self-start">
           {saving ? "Guardando…" : "Guardar cambios"}
