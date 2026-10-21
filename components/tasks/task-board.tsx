@@ -23,6 +23,7 @@ import { TaskFiltersBar } from "@/components/tasks/task-filters-bar";
 import { HeaderPortal } from "@/components/header-portal";
 import { reorderTask } from "@/lib/actions/tasks";
 import {
+  CURRENT_SPRINT,
   SORT_OPTIONS,
   countActiveFilters,
   filterTasks,
@@ -32,7 +33,8 @@ import {
   type TaskFilters,
 } from "@/lib/tasks/filters";
 import { isColumnCollapsed, saveColumnPrefs, type ColumnPrefs } from "@/lib/tasks/columns";
-import type { AccountRow, BoardColumnRow, LabelRow, ProfileRow, TaskWithRelations } from "@/lib/types";
+import { currentSprint, formatSprintDates, sprintProgress } from "@/lib/tasks/sprints";
+import type { AccountRow, BoardColumnRow, LabelRow, ProfileRow, SprintRow, TaskWithRelations } from "@/lib/types";
 
 type MoveAction = { taskId: string; columnId: string; orderedIds: string[] };
 
@@ -42,6 +44,7 @@ export function TaskBoard({
   labels,
   profiles,
   accounts,
+  sprints = [],
   today,
   currentUserId,
   columnPrefs: initialColumnPrefs,
@@ -51,6 +54,8 @@ export function TaskBoard({
   labels: LabelRow[];
   profiles: ProfileRow[];
   accounts: AccountRow[];
+  /** Vacío mientras no esté aplicada la migración de sprints. */
+  sprints?: SprintRow[];
   /** YYYY-MM-DD en hora de Madrid; lo calcula el servidor para que coincida al hidratar. */
   today: string;
   /** Perfil de quien mira el tablero (para «Mis tareas»). */
@@ -81,6 +86,9 @@ export function TaskBoard({
   // Los filtros viven en la URL (la vista se puede compartir y sobrevive a recargar).
   // replaceState en vez de router.replace: no hace falta volver a pedir el tablero al servidor.
   const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
+  const current = useMemo(() => currentSprint(sprints, today), [sprints, today]);
+  const shownSprint =
+    filters.sprint === CURRENT_SPRINT ? current : (sprints.find((s) => s.id === filters.sprint) ?? null);
 
   function handleFiltersChange(next: TaskFilters) {
     const qs = serializeFilters(next, new URLSearchParams(searchParams.toString())).toString();
@@ -112,10 +120,10 @@ export function TaskBoard({
   const visibleByColumn = useMemo(() => {
     const map = new Map<string, TaskWithRelations[]>();
     for (const [columnId, list] of tasksByColumn) {
-      map.set(columnId, sortTasks(filterTasks(list, filters, today), filters.sort));
+      map.set(columnId, sortTasks(filterTasks(list, filters, today, current?.id ?? null), filters.sort));
     }
     return map;
-  }, [tasksByColumn, filters, today]);
+  }, [tasksByColumn, filters, today, current]);
 
   const activeFilterCount = countActiveFilters(filters);
   const totalCount = optimisticTasks.length;
@@ -209,11 +217,14 @@ export function TaskBoard({
           onChange={handleFiltersChange}
           profiles={profiles}
           labels={labels}
+          sprints={sprints}
+          currentSprint={current}
           currentUserId={currentUserId}
           visibleCount={visibleCount}
           totalCount={totalCount}
         />
       </div>
+      {shownSprint && <SprintSummary sprint={shownSprint} tasks={optimisticTasks} />}
       <DndContext
         id="task-board"
         sensors={sensors}
@@ -243,8 +254,25 @@ export function TaskBoard({
         labels={labels}
         profiles={profiles}
         accounts={accounts}
+        sprints={sprints}
         onClose={() => setOpenTaskId(null)}
       />
+    </div>
+  );
+}
+
+// Cabecera del sprint filtrado: fechas, objetivo y cuántas de sus tareas están cerradas
+// (contando todas las del sprint, no solo las que dejan ver los demás filtros).
+function SprintSummary({ sprint, tasks }: { sprint: SprintRow; tasks: TaskWithRelations[] }) {
+  const { closed, total } = sprintProgress(tasks, sprint.id);
+  return (
+    <div className="bg-muted/40 flex shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 rounded-md border px-3 py-2 text-sm">
+      <span className="font-semibold">{sprint.name}</span>
+      <span className="text-muted-foreground tabular-nums">{formatSprintDates(sprint)}</span>
+      {sprint.goal && <span className="min-w-0 flex-1">{sprint.goal}</span>}
+      <span className="ml-auto font-medium tabular-nums">
+        Cerradas {closed} de {total}
+      </span>
     </div>
   );
 }

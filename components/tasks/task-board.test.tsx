@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useSyncExternalStore } from "react";
 import { TaskBoard } from "./task-board";
 import type { ColumnPrefs } from "@/lib/tasks/columns";
-import type { BoardColumnRow, LabelRow, ProfileRow, TaskWithRelations } from "@/lib/types";
+import type { BoardColumnRow, LabelRow, ProfileRow, SprintRow, TaskWithRelations } from "@/lib/types";
 
 // Next enlaza history.replaceState con useSearchParams; aquí se imita con un
 // almacén mínimo para comprobar que el tablero lee y escribe la URL.
@@ -67,6 +67,8 @@ function task(title: string, overrides: Partial<TaskWithRelations> = {}): TaskWi
     priority: "media",
     position,
     done: false,
+    done_at: null,
+    sprint_id: null,
     linked_account_id: null,
     linked_deal_id: null,
     created_at: "2026-10-01T10:00:00Z",
@@ -94,11 +96,13 @@ function renderBoard({
   tasks = buildTasks(),
   currentUserId = null,
   columnPrefs = {},
+  sprints = [],
 }: {
   boardColumns?: BoardColumnRow[];
   tasks?: TaskWithRelations[];
   currentUserId?: string | null;
   columnPrefs?: ColumnPrefs;
+  sprints?: SprintRow[];
 } = {}) {
   return render(
     <TaskBoard
@@ -107,6 +111,7 @@ function renderBoard({
       labels={labels}
       profiles={profiles}
       accounts={[]}
+      sprints={sprints}
       today={TODAY}
       currentUserId={currentUserId}
       columnPrefs={columnPrefs}
@@ -397,5 +402,54 @@ describe("TaskBoard: columnas plegadas", () => {
     expect(cardTitles()).toEqual(["Contrato firmado", "Logo nuevo"]);
     expect(screen.getByRole("button", { name: "Desplegar la columna Por hacer" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Desplegar la columna Por pensar" })).toBeInTheDocument();
+  });
+});
+
+describe("TaskBoard: sprints", () => {
+  const sprint1: SprintRow = {
+    id: "s1",
+    name: "Sprint 1",
+    starts_on: "2026-10-05",
+    ends_on: "2026-10-16",
+    goal: "Play en producción",
+    created_at: "",
+  };
+  const sprint2: SprintRow = { ...sprint1, id: "s2", name: "Sprint 2", starts_on: "2026-10-19", ends_on: "2026-10-30", goal: null };
+
+  function sprintTasks() {
+    position = 0;
+    return [
+      task("Subir el AAB", { sprint_id: "s1", done: true }),
+      task("Revisar contrato", { sprint_id: "s1" }),
+      task("Idea suelta"),
+      task("Pulir el login", { column_id: "c-doing", sprint_id: "s2" }),
+    ];
+  }
+
+  it("sin sprints creados no enseña el filtro de sprint", () => {
+    renderBoard();
+    expect(screen.queryByRole("combobox", { name: "Filtrar por sprint" })).not.toBeInTheDocument();
+  });
+
+  it("?sprint=actual deja solo las del sprint en marcha y enseña su cabecera", () => {
+    setUrl("?sprint=actual");
+    renderBoard({ tasks: sprintTasks(), sprints: [sprint1, sprint2] });
+
+    expect(titlesIn("Por hacer")).toEqual(["Subir el AAB", "Revisar contrato"]);
+    expect(titlesIn("En curso")).toEqual([]);
+    expect(screen.getByText("Play en producción")).toBeInTheDocument();
+    expect(screen.getByText("Cerradas 1 de 2")).toBeInTheDocument();
+  });
+
+  it("elegir otro sprint en el selector cambia la URL y la cabecera", async () => {
+    const user = userEvent.setup();
+    renderBoard({ tasks: sprintTasks(), sprints: [sprint1, sprint2] });
+
+    await user.click(screen.getByRole("combobox", { name: "Filtrar por sprint" }));
+    await user.click(screen.getByRole("option", { name: "Sprint 2" }));
+
+    expect(window.location.search).toBe("?sprint=s2");
+    expect(titlesIn("En curso")).toEqual(["Pulir el login"]);
+    expect(screen.getByText("Cerradas 0 de 1")).toBeInTheDocument();
   });
 });
