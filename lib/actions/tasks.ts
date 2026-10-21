@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/send";
 import { taskAssignedEmail, taskUpdatedEmail } from "@/lib/email/templates";
+import { doneAfterMove } from "@/lib/tasks/move";
 import type { TaskPriority } from "@/lib/types";
 
 const BOARD_PATH = "/tareas";
@@ -135,20 +136,23 @@ export async function createTask(input: {
 // tal y como debe quedar visualmente tras soltar el drag.
 export async function reorderTask(taskId: string, columnId: string, orderedTaskIds: string[]) {
   const supabase = await createClient();
-  const { data: column } = await supabase
-    .from("board_columns")
-    .select("is_done_column")
-    .eq("id", columnId)
-    .single();
+  const { data: task } = await supabase.from("tasks").select("column_id").eq("id", taskId).single();
+  const [{ data: columns }, pendingSubtasks] = await Promise.all([
+    supabase
+      .from("board_columns")
+      .select("id, is_done_column")
+      .in("id", task ? [columnId, task.column_id] : [columnId]),
+    hasPendingSubtasks(supabase, taskId),
+  ]);
+  const isDone = (id: string | undefined) => columns?.some((c) => c.id === id && c.is_done_column) ?? false;
 
   const updates: { column_id: string; done?: boolean } = { column_id: columnId };
-
-  // Mover una tarea a una columna marcada como "de hecho" (p.ej. "Done") la
-  // completa sola, salvo que le queden subtareas pendientes — misma regla que
-  // ya aplica setTaskDone al marcar el check manualmente.
-  if (column?.is_done_column && !(await hasPendingSubtasks(supabase, taskId))) {
-    updates.done = true;
-  }
+  const done = doneAfterMove({
+    fromDoneColumn: isDone(task?.column_id),
+    toDoneColumn: isDone(columnId),
+    hasPendingSubtasks: pendingSubtasks,
+  });
+  if (done !== undefined) updates.done = done;
 
   const { error } = await supabase.from("tasks").update(updates).eq("id", taskId);
   if (error) throw new Error(error.message);
@@ -172,6 +176,7 @@ export async function updateTask(
     priority: TaskPriority;
     linkedAccountId: string | null;
     linkedDealId: string | null;
+    sprintId: string | null;
   }>
 ) {
   const supabase = await createClient();
@@ -190,6 +195,7 @@ export async function updateTask(
       ...(input.priority !== undefined && { priority: input.priority }),
       ...(input.linkedAccountId !== undefined && { linked_account_id: input.linkedAccountId }),
       ...(input.linkedDealId !== undefined && { linked_deal_id: input.linkedDealId }),
+      ...(input.sprintId !== undefined && { sprint_id: input.sprintId }),
     })
     .eq("id", taskId);
   if (error) throw new Error(error.message);

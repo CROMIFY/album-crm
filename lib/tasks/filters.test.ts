@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CURRENT_SPRINT,
   EMPTY_FILTERS,
   NONE,
   countActiveFilters,
@@ -39,6 +40,8 @@ function task(overrides: Partial<TaskWithRelations> = {}): TaskWithRelations {
     priority: "media",
     position: counter,
     done: false,
+    done_at: null,
+    sprint_id: null,
     linked_account_id: null,
     linked_deal_id: null,
     created_at: "2026-10-01T10:00:00Z",
@@ -65,6 +68,7 @@ describe("parseFilters / serializeFilters", () => {
       due: "rango",
       from: "2026-10-01",
       to: "2026-10-31",
+      sprint: CURRENT_SPRINT,
       sort: "priority-desc",
     });
     const parsed = parseFilters(serializeFilters(original));
@@ -111,6 +115,7 @@ describe("countActiveFilters", () => {
     expect(countActiveFilters(EMPTY_FILTERS)).toBe(0);
     expect(countActiveFilters(filters({ sort: "due-asc" }))).toBe(0);
     expect(countActiveFilters(filters({ assignees: ["a", "b"], priorities: ["alta"] }))).toBe(2);
+    expect(countActiveFilters(filters({ sprint: CURRENT_SPRINT }))).toBe(1);
   });
 
   it("un rango sin extremos no cuenta", () => {
@@ -222,6 +227,32 @@ describe("filterTasks", () => {
       const finDeMes = task({ due_date: "2026-11-02" });
       expect(ids(filterTasks([finDeMes], filters({ due: "semana" }), "2026-10-30"))).toEqual([finDeMes.id]);
       expect(ids(filterTasks([finDeMes], filters({ due: "semana" }), "2026-10-20"))).toEqual([]);
+    });
+  });
+
+  describe("por sprint", () => {
+    const enS1 = task({ sprint_id: "s1" });
+    const enS2 = task({ sprint_id: "s2" });
+    const sinSprint = task({ sprint_id: null });
+    const all = [enS1, enS2, sinSprint];
+
+    it("«sprint actual» usa el id del sprint actual", () => {
+      expect(ids(filterTasks(all, filters({ sprint: CURRENT_SPRINT }), TODAY, "s2"))).toEqual([enS2.id]);
+    });
+
+    it("«sprint actual» sin sprints no enseña nada", () => {
+      expect(ids(filterTasks(all, filters({ sprint: CURRENT_SPRINT }), TODAY, null))).toEqual([]);
+    });
+
+    it("un sprint concreto y «sin sprint»", () => {
+      expect(ids(filterTasks(all, filters({ sprint: "s1" }), TODAY, "s2"))).toEqual([enS1.id]);
+      expect(ids(filterTasks(all, filters({ sprint: NONE }), TODAY, "s2"))).toEqual([sinSprint.id]);
+    });
+
+    it("tareas sin el campo (antes de la migración) cuentan como sin sprint", () => {
+      const antigua = task();
+      delete (antigua as Partial<TaskWithRelations>).sprint_id;
+      expect(ids(filterTasks([antigua], filters({ sprint: NONE }), TODAY))).toEqual([antigua.id]);
     });
   });
 });

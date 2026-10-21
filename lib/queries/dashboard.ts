@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { fetchFunnelDashboard } from "@/lib/queries/crm";
+import { fetchStageCounts } from "@/lib/queries/crm";
 import { monthlyRecurringTotal, type DealStage, type ExpenseRow } from "@/lib/types";
 
 function activeCount(stageCounts: Record<DealStage, number>) {
@@ -17,16 +17,16 @@ export async function fetchDashboardData() {
   const today = now.toISOString().slice(0, 10);
 
   const [
-    clubDashboard,
-    sponsorDashboard,
+    clubStageCounts,
+    sponsorStageCounts,
     { count: wonThisMonth },
     { count: overdueTasks },
     tasksRes,
     activityRes,
     expensesRes,
   ] = await Promise.all([
-    fetchFunnelDashboard("club"),
-    fetchFunnelDashboard("patrocinador"),
+    fetchStageCounts("club"),
+    fetchStageCounts("patrocinador"),
     supabase
       .from("deal_stage_history")
       .select("*", { count: "exact", head: true })
@@ -74,14 +74,14 @@ export async function fetchDashboardData() {
 
   return {
     kpis: {
-      activeClubs: activeCount(clubDashboard.stageCounts),
-      activeSponsors: activeCount(sponsorDashboard.stageCounts),
+      activeClubs: activeCount(clubStageCounts),
+      activeSponsors: activeCount(sponsorStageCounts),
       wonThisMonth: wonThisMonth ?? 0,
       overdueTasks: overdueTasks ?? 0,
       monthlyExpenses: monthlyRecurringTotal((expensesRes.data ?? []) as ExpenseRow[]),
     },
-    clubStageCounts: clubDashboard.stageCounts,
-    sponsorStageCounts: sponsorDashboard.stageCounts,
+    clubStageCounts,
+    sponsorStageCounts,
     upcomingTasks: ((tasksRes.data ?? []) as unknown as RawUpcomingTask[]).map((t) => ({
       ...t,
       assignees: t.task_assignees.map((ta) => ta.profile),

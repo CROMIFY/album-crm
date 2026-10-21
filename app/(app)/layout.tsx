@@ -10,18 +10,23 @@ import { Separator } from "@/components/ui/separator";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // proxy.ts ya valida al usuario contra Supabase Auth en cada petición; aquí
+  // basta con leer los claims del JWT (verificación local con claves
+  // asimétricas, sin segunda ida y vuelta a Supabase).
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const claims = claimsData?.claims;
 
-  if (!user) {
+  if (!claims?.sub) {
     redirect("/login");
   }
+
+  const userId = claims.sub;
+  const userEmail = typeof claims.email === "string" ? claims.email : "";
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("nombre")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
 
   // Sin await a propósito: esto no debe bloquear el layout (que se vuelve a
@@ -32,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     supabase
       .from("google_calendar_tokens")
       .select("profile_id", { count: "exact", head: true })
-      .eq("profile_id", user.id)
+      .eq("profile_id", userId)
   ).then(({ count }) => (count ?? 0) > 0);
 
   return (
@@ -48,8 +53,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div id="header-actions" className="flex items-center gap-2" />
             <ModeToggle />
             <UserMenu
-              nombre={profile?.nombre ?? user.email ?? "Usuario"}
-              email={user.email ?? ""}
+              nombre={profile?.nombre ?? (userEmail || "Usuario")}
+              email={userEmail}
               googleCalendarConnectedPromise={googleCalendarConnectedPromise}
             />
           </div>
