@@ -7,9 +7,9 @@ import { todayInMadrid } from "@/lib/tasks/filters";
 
 export default async function TareasPage() {
   const supabase = await createClient();
-  const [{ columns, tasks, labels, profiles, accounts, sprints }, { data: userData }, cookieStore] = await Promise.all([
+  const [{ columns, tasks, labels, profiles, accounts, sprints }, { data: claimsData }, cookieStore] = await Promise.all([
     fetchBoard(),
-    supabase.auth.getUser(),
+    supabase.auth.getClaims(),
     cookies(),
   ]);
 
@@ -22,7 +22,7 @@ export default async function TareasPage() {
       accounts={accounts}
       sprints={sprints}
       today={todayInMadrid()}
-      currentUserId={userData.user?.id ?? null}
+      currentUserId={claimsData?.claims.sub ?? null}
       columnPrefs={parseColumnPrefs(cookieStore.get(COLUMN_PREFS_COOKIE)?.value)}
     />
   );
