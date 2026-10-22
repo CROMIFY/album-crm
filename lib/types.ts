@@ -126,6 +126,8 @@ export const DEFAULT_CADENCE_TEMPLATE: { label: string; action: string }[] = [
 
 export type TaskPriority = "baja" | "media" | "alta";
 
+export type TaskSize = "S" | "M" | "L";
+
 // Nota: estas Row types deben declararse con `type`, no `interface` — TypeScript
 // solo infiere una firma de índice implícita en object-type literals, no en
 // interfaces, y supabase-js exige que cada Row sea asignable a Record<string, unknown>.
@@ -225,6 +227,7 @@ export type TaskRow = {
   /** Cuándo se completó (lo pone un trigger); null si está abierta o se cerró antes de existir el campo. */
   done_at: string | null;
   sprint_id: string | null;
+  size: TaskSize | null;
   linked_account_id: string | null;
   linked_deal_id: string | null;
   created_at: string;
@@ -238,6 +241,11 @@ export type SprintRow = {
   starts_on: string;
   ends_on: string;
   goal: string | null;
+  /** Cuándo se cerró con «Cerrar sprint»; null mientras está abierto. */
+  closed_at: string | null;
+  /** Al cerrar: tareas terminadas y tareas que pasaron al siguiente o al backlog. */
+  closed_count: number | null;
+  carried_count: number | null;
   created_at: string;
 };
 
@@ -443,7 +451,12 @@ type Insertable<R, Optional extends keyof R = never> = Omit<
 export type Database = {
   public: {
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      close_sprint: {
+        Args: { p_sprint_id: string; p_next_sprint_id: string | null };
+        Returns: { closed: number; carried: number };
+      };
+    };
     Enums: {
       account_type: AccountType;
       deal_stage: DealStage;
@@ -508,12 +521,17 @@ export type Database = {
           | "done"
           | "done_at"
           | "sprint_id"
+          | "size"
           | "linked_account_id"
           | "linked_deal_id"
         >,
         Partial<TaskRow>
       >;
-      sprints: Table<SprintRow, Insertable<SprintRow, "goal">, Partial<SprintRow>>;
+      sprints: Table<
+        SprintRow,
+        Insertable<SprintRow, "goal" | "closed_at" | "closed_count" | "carried_count">,
+        Partial<SprintRow>
+      >;
       task_labels: Table<TaskLabelRow, TaskLabelRow, Partial<TaskLabelRow>>;
       task_assignees: Table<TaskAssigneeRow, TaskAssigneeRow, Partial<TaskAssigneeRow>>;
       subtasks: Table<
