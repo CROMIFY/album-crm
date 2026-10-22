@@ -24,14 +24,18 @@ jobs:
           node-version: 22
           cache: npm
 
-      # El package-lock.json se genera con npm 11 (el de las máquinas del
-      # equipo). El npm 10 que trae Node 22 lo da por desincronizado
-      # ("Missing: @emnapi/runtime ... from lock file") y npm ci falla.
-      - name: Use npm 11
-        run: npm install -g npm@11
-
+      # npm en Windows quita del lockfile @emnapi/core y @emnapi/runtime
+      # (dependencias de los paquetes wasm de sharp y napi-rs) y npm en Linux
+      # las pide, asi que npm ci falla con "Missing: @emnapi/... from lock
+      # file" cada vez que el lockfile se regenera en Windows. En ese caso
+      # npm install, que respeta las versiones del lockfile y solo anade lo
+      # que falta.
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci || {
+            echo "::warning::npm ci fallo (lockfile generado en Windows); se usa npm install"
+            npm install --no-audit --no-fund
+          }
 
       # No corre "npm run verify" completo porque incluye "build", y el
       # build local no tiene acceso a las env vars "Sensitive" (ver nota de
