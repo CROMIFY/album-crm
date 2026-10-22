@@ -3,6 +3,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSyncExternalStore } from "react";
 import { TaskBoard } from "./task-board";
+import { closeSprint } from "@/lib/actions/tasks";
 import type { ColumnPrefs } from "@/lib/tasks/columns";
 import type { BoardColumnRow, LabelRow, ProfileRow, SprintRow, TaskWithRelations } from "@/lib/types";
 
@@ -38,6 +39,7 @@ vi.mock("@/lib/actions/tasks", () => ({
   addSubtask: vi.fn(),
   toggleSubtask: vi.fn(),
   deleteSubtask: vi.fn(),
+  closeSprint: vi.fn(async () => ({ closed: 1, carried: 1 })),
 }));
 
 const TODAY = "2026-10-08";
@@ -69,6 +71,7 @@ function task(title: string, overrides: Partial<TaskWithRelations> = {}): TaskWi
     done: false,
     done_at: null,
     sprint_id: null,
+    size: null,
     linked_account_id: null,
     linked_deal_id: null,
     created_at: "2026-10-01T10:00:00Z",
@@ -412,6 +415,9 @@ describe("TaskBoard: sprints", () => {
     starts_on: "2026-10-05",
     ends_on: "2026-10-16",
     goal: "Play en producción",
+    closed_at: null,
+    closed_count: null,
+    carried_count: null,
     created_at: "",
   };
   const sprint2: SprintRow = { ...sprint1, id: "s2", name: "Sprint 2", starts_on: "2026-10-19", ends_on: "2026-10-30", goal: null };
@@ -419,7 +425,7 @@ describe("TaskBoard: sprints", () => {
   function sprintTasks() {
     position = 0;
     return [
-      task("Subir el AAB", { sprint_id: "s1", done: true }),
+      task("Subir el AAB", { sprint_id: "s1", done: true, size: "M" }),
       task("Revisar contrato", { sprint_id: "s1" }),
       task("Idea suelta"),
       task("Pulir el login", { column_id: "c-doing", sprint_id: "s2" }),
@@ -451,5 +457,32 @@ describe("TaskBoard: sprints", () => {
     expect(window.location.search).toBe("?sprint=s2");
     expect(titlesIn("En curso")).toEqual(["Pulir el login"]);
     expect(screen.getByText("Cerradas 0 de 1")).toBeInTheDocument();
+  });
+
+  it("la cabecera suma el tamaño del sprint", () => {
+    setUrl("?sprint=actual");
+    renderBoard({ tasks: sprintTasks(), sprints: [sprint1, sprint2] });
+    expect(screen.getByText("Tamaño: 1 M · 1 sin tamaño · 2 puntos")).toBeInTheDocument();
+  });
+
+  it("«Cerrar sprint» manda las sin terminar al sprint siguiente por defecto", async () => {
+    const user = userEvent.setup();
+    setUrl("?sprint=actual");
+    renderBoard({ tasks: sprintTasks(), sprints: [sprint1, sprint2] });
+
+    await user.click(screen.getByRole("button", { name: "Cerrar sprint" }));
+    expect(screen.getByText(/1 tarea sin terminar pasa/)).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Cerrar sprint" }));
+
+    expect(closeSprint).toHaveBeenCalledWith("s1", "s2");
+  });
+
+  it("un sprint ya cerrado no ofrece cerrarlo y enseña su resumen", () => {
+    setUrl("?sprint=s1");
+    const cerrado = { ...sprint1, closed_at: "2026-10-16T16:00:00Z", closed_count: 1, carried_count: 1 };
+    renderBoard({ tasks: sprintTasks(), sprints: [cerrado, sprint2] });
+    expect(screen.queryByRole("button", { name: "Cerrar sprint" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Cerrado el 16 oct: 1 terminadas, 1 pasaron/)).toBeInTheDocument();
   });
 });

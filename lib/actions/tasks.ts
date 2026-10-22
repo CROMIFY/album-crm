@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/send";
 import { taskAssignedEmail, taskUpdatedEmail } from "@/lib/email/templates";
 import { doneAfterMove } from "@/lib/tasks/move";
-import type { TaskPriority } from "@/lib/types";
+import type { TaskPriority, TaskSize } from "@/lib/types";
 
 const BOARD_PATH = "/tareas";
 
@@ -177,6 +177,7 @@ export async function updateTask(
     linkedAccountId: string | null;
     linkedDealId: string | null;
     sprintId: string | null;
+    size: TaskSize | null;
   }>
 ) {
   const supabase = await createClient();
@@ -196,6 +197,7 @@ export async function updateTask(
       ...(input.linkedAccountId !== undefined && { linked_account_id: input.linkedAccountId }),
       ...(input.linkedDealId !== undefined && { linked_deal_id: input.linkedDealId }),
       ...(input.sprintId !== undefined && { sprint_id: input.sprintId }),
+      ...(input.size !== undefined && { size: input.size }),
     })
     .eq("id", taskId);
   if (error) throw new Error(error.message);
@@ -264,6 +266,19 @@ export async function setTaskDone(taskId: string, done: boolean) {
   const { error } = await supabase.from("tasks").update({ done }).eq("id", taskId);
   if (error) throw new Error(error.message);
   revalidatePath(BOARD_PATH);
+}
+
+// Cierra el sprint en una transacción (función close_sprint de la migración
+// 0017): las tareas sin terminar pasan a nextSprintId o, si es null, al backlog.
+export async function closeSprint(sprintId: string, nextSprintId: string | null) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("close_sprint", {
+    p_sprint_id: sprintId,
+    p_next_sprint_id: nextSprintId,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(BOARD_PATH);
+  return data;
 }
 
 export async function deleteTask(taskId: string) {

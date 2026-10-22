@@ -42,7 +42,8 @@ import {
   deleteSubtask,
 } from "@/lib/actions/tasks";
 import { CreateLabelButton } from "@/components/tasks/create-label-button";
-import type { AccountRow, LabelRow, ProfileRow, SprintRow, TaskPriority, TaskWithRelations } from "@/lib/types";
+import { TASK_SIZES } from "@/lib/tasks/sprints";
+import type { AccountRow, LabelRow, ProfileRow, SprintRow, TaskPriority, TaskSize, TaskWithRelations } from "@/lib/types";
 
 export function TaskDetailSheet({
   task,
@@ -123,6 +124,7 @@ type Draft = {
   assigneeIds: string[];
   linkedAccountId: string;
   sprintId: string;
+  size: string;
 };
 
 function draftFromTask(task: TaskWithRelations): Draft {
@@ -134,6 +136,7 @@ function draftFromTask(task: TaskWithRelations): Draft {
     assigneeIds: task.assignees.map((a) => a.id),
     linkedAccountId: task.linked_account_id ?? "none",
     sprintId: task.sprint_id ?? "none",
+    size: task.size ?? "none",
   };
 }
 
@@ -199,6 +202,8 @@ function TaskDetailForm({
         ...(draft.sprintId !== saved.sprintId && {
           sprintId: draft.sprintId === "none" ? null : draft.sprintId,
         }),
+        // Igual que el sprint: solo si cambia (la columna llega con la migración 0017).
+        ...(draft.size !== saved.size && { size: draft.size === "none" ? null : (draft.size as TaskSize) }),
       });
       setSaved(draft);
       toast.success("Cambios guardados");
@@ -290,6 +295,23 @@ function TaskDetailForm({
             <Label className="text-xs">Fecha límite</Label>
             <Input type="date" value={draft.dueDate} onChange={(e) => set("dueDate", e.target.value)} />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs">Tamaño</Label>
+          <Select value={draft.size} onValueChange={(v) => set("size", v)}>
+            <SelectTrigger className="w-full" aria-label="Tamaño">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sin tamaño</SelectItem>
+              {TASK_SIZES.map((size) => (
+                <SelectItem key={size} value={size}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-2">

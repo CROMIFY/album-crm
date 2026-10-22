@@ -20,6 +20,7 @@ import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { ManageLabelsDialog } from "@/components/tasks/manage-labels-dialog";
 import { TaskDetailSheet } from "@/components/tasks/task-detail-sheet";
 import { TaskFiltersBar } from "@/components/tasks/task-filters-bar";
+import { SprintSummary } from "@/components/tasks/sprint-summary";
 import { HeaderPortal } from "@/components/header-portal";
 import { reorderTask } from "@/lib/actions/tasks";
 import {
@@ -33,7 +34,7 @@ import {
   type TaskFilters,
 } from "@/lib/tasks/filters";
 import { isColumnCollapsed, saveColumnPrefs, type ColumnPrefs } from "@/lib/tasks/columns";
-import { currentSprint, formatSprintDates, sprintProgress } from "@/lib/tasks/sprints";
+import { currentSprint } from "@/lib/tasks/sprints";
 import type { AccountRow, BoardColumnRow, LabelRow, ProfileRow, SprintRow, TaskWithRelations } from "@/lib/types";
 
 type MoveAction = { taskId: string; columnId: string; orderedIds: string[] };
@@ -224,7 +225,7 @@ export function TaskBoard({
           totalCount={totalCount}
         />
       </div>
-      {shownSprint && <SprintSummary sprint={shownSprint} tasks={optimisticTasks} />}
+      {shownSprint && <SprintSummary sprint={shownSprint} sprints={sprints} tasks={optimisticTasks} />}
       <DndContext
         id="task-board"
         sensors={sensors}
@@ -261,18 +262,3 @@ export function TaskBoard({
   );
 }
 
-// Cabecera del sprint filtrado: fechas, objetivo y cuántas de sus tareas están cerradas
-// (contando todas las del sprint, no solo las que dejan ver los demás filtros).
-function SprintSummary({ sprint, tasks }: { sprint: SprintRow; tasks: TaskWithRelations[] }) {
-  const { closed, total } = sprintProgress(tasks, sprint.id);
-  return (
-    <div className="bg-muted/40 flex shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 rounded-md border px-3 py-2 text-sm">
-      <span className="font-semibold">{sprint.name}</span>
-      <span className="text-muted-foreground tabular-nums">{formatSprintDates(sprint)}</span>
-      {sprint.goal && <span className="min-w-0 flex-1">{sprint.goal}</span>}
-      <span className="ml-auto font-medium tabular-nums">
-        Cerradas {closed} de {total}
-      </span>
-    </div>
-  );
-}

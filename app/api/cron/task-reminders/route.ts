@@ -2,10 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { taskDueReminderEmail } from "@/lib/email/templates";
+import { reminderWhen, reminderWindow } from "@/lib/tasks/reminders";
 import type { TaskPriority } from "@/lib/types";
 
 // Cron diario (ver vercel.json): avisa por email de tareas sin terminar que
-// vencen mañana o que vencen hoy (o ya vencieron), y deja constancia en
+// vencen hoy o mañana (en hora de Madrid; las ya vencidas no), y deja constancia en
 // notification_log para no repetir el aviso el mismo día. Cada tarea puede
 // tener varias personas asignadas — se avisa a todas.
 export async function GET(request: NextRequest) {
@@ -19,9 +20,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createAdminClient();
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const days = reminderWindow();
 
   type DueTaskRow = {
     id: string;
@@ -35,8 +34,8 @@ export async function GET(request: NextRequest) {
   const { data: rawDueTasks, error } = await supabase
     .from("tasks")
     .select("id, title, due_date, column_id, priority, task_assignees(profile_id)")
-    .lte("due_date", tomorrow)
-    .not("due_date", "is", null)
+    .gte("due_date", days.today)
+    .lte("due_date", days.tomorrow)
     .eq("done", false);
 
   if (error) {
@@ -48,13 +47,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, notified: 0 });
   }
 
-  const withKind = dueTasks.map((task) => ({
-    ...task,
-    eventType: task.due_date === tomorrow ? "task_due_soon" : "task_due_today",
-    when: (task.due_date === tomorrow ? "mañana" : "hoy") as "mañana" | "hoy",
-  }));
+  const withKind = dueTasks.flatMap((task) => {
+    const when = reminderWhen(task.due_date, days);
+    if (!when) return [];
+    return [{ ...task, when, eventType: when === "mañana" ? "task_due_soon" : "task_due_today" }];
+  });
 
-  const startOfDay = `${today}T00:00:00.000Z`;
+  const startOfDay = `${days.today}T00:00:00.000Z`;
   const { data: alreadyLogged } = await supabase
     .from("notification_log")
     .select("event_type, payload")
