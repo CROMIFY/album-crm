@@ -42,6 +42,7 @@ function task(overrides: Partial<TaskWithRelations> = {}): TaskWithRelations {
     done: false,
     done_at: null,
     sprint_id: null,
+    size: null,
     linked_account_id: null,
     linked_deal_id: null,
     created_at: "2026-10-01T10:00:00Z",

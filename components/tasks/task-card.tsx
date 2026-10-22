@@ -72,6 +72,14 @@ function TaskCardContent({
           >
             {task.priority}
           </span>
+          {task.size && (
+            <span
+              className="border-border text-muted-foreground rounded border px-1 py-0.5 text-[10px] leading-none font-semibold"
+              title={`Tamaño ${task.size}`}
+            >
+              {task.size}
+            </span>
+          )}
           <SubtaskProgressRing done={doneSubtasks} total={totalSubtasks} />
           {task.due_date && (
             <span className="text-muted-foreground text-xs">
