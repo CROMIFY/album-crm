@@ -17,6 +17,8 @@ const STAMP = "[28-oct hito]";
 // Hasta el fin del sprint 1 (7-nov) van a la columna «Sprint» con el sprint 1; el resto a «Por pensar».
 const SPRINT_1_END = "2026-11-07";
 const MATCH_THRESHOLD = 0.6;
+// Por debajo del umbral, pero lo bastante parecidas para enseñarlas en el ensayo.
+const NEAR_THRESHOLD = 0.4;
 
 const args = process.argv.slice(2);
 const planFile = args[args.indexOf("--plan") + 1];
@@ -34,16 +36,28 @@ const fingerprint = (t) =>
     .update(JSON.stringify([t.title, t.description, t.due_date, t.column_id, t.is_milestone, t.milestone_type, t.start_date]))
     .digest("hex");
 
+const TASK_FIELDS = "id,title,description,due_date,column_id,position,done,sprint_id,task_assignees(profile_id)";
+
+// Antes de la migración 0018 no existen las columnas de hito: el ensayo funciona
+// igual (las da por vacías); --aplicar exige que estén.
+async function readTasks() {
+  try {
+    return { tasks: await api.get(`tasks?select=${TASK_FIELDS},is_milestone,milestone_type,start_date`), has0018: true };
+  } catch (err) {
+    if (!String(err.message).includes("is_milestone")) throw err;
+    const tasks = await api.get(`tasks?select=${TASK_FIELDS}`);
+    return { tasks: tasks.map((t) => ({ ...t, is_milestone: false, milestone_type: null, start_date: null })), has0018: false };
+  }
+}
+
 async function readBoard() {
-  const [columns, tasks, profiles, sprints] = await Promise.all([
+  const [columns, { tasks, has0018 }, profiles, sprints] = await Promise.all([
     api.get("board_columns?select=id,name,position,is_done_column&order=position"),
-    api.get(
-      "tasks?select=id,title,description,due_date,column_id,position,done,is_milestone,milestone_type,start_date,sprint_id,task_assignees(profile_id)"
-    ),
+    readTasks(),
     api.get("profiles?select=id,nombre,email"),
     api.get("sprints?select=id,name,starts_on,ends_on"),
   ]);
-  return { columns, tasks, profiles, sprints };
+  return { columns, tasks, profiles, sprints, has0018 };
 }
 
 function resolveOwners(names, profiles, warnings, title) {
@@ -69,11 +83,21 @@ async function makePlan() {
   const used = new Set();
   const steps = HITOS.map((h) => {
     const owners = resolveOwners(h.owners, board.profiles, warnings, h.title);
-    const candidates = board.tasks
+    // En el JSON, "match": "<id o prefijo de tarjeta>" fuerza cuál se actualiza y "match": "crear" obliga a crear.
+    const forced = h.match && h.match !== "crear" ? board.tasks.find((t) => t.id.startsWith(h.match)) : null;
+    if (h.match && h.match !== "crear" && !forced) throw new Error(`«${h.title}»: no existe la tarjeta ${h.match}.`);
+    const scored = board.tasks
       .filter((t) => !used.has(t.id))
       .map((t) => ({ t, score: similarity(t.title, h.title) }))
-      .filter((c) => c.score >= MATCH_THRESHOLD)
       .sort((a, b) => b.score - a.score);
+    const candidates = forced
+      ? [{ t: forced, score: similarity(forced.title, h.title) }]
+      : h.match === "crear"
+        ? []
+        : scored.filter((c) => c.score >= MATCH_THRESHOLD);
+    const near = scored.filter((c) => c.score >= NEAR_THRESHOLD && c.t !== forced).slice(0, 3);
+    const columnName = (id) => board.columns.find((c) => c.id === id)?.name ?? "?";
+    const describe = (t) => `«${t.title}» [${columnName(t.column_id)}${t.done ? ", hecha" : ""}, ${t.id.slice(0, 8)}]`;
     const fields = {
       due_date: h.due,
       start_date: h.start ?? null,
@@ -88,6 +112,8 @@ async function makePlan() {
         hito: h.title,
         taskId: t.id,
         currentTitle: t.title,
+        currentCard: describe(t),
+        forced: !!forced,
         score: Math.round(score * 100) / 100,
         fingerprint: fingerprint(t),
         before: { due_date: t.due_date, start_date: t.start_date, milestone_type: t.milestone_type },
@@ -96,7 +122,7 @@ async function makePlan() {
           description: `${STAMP} Marcada como hito. Antes: fecha ${t.due_date ?? "sin fecha"}.${h.note ? ` ${h.note}` : ""}\n\n${t.description ?? ""}`.trim(),
         },
         addOwners: owners.filter((id) => !t.task_assignees.some((a) => a.profile_id === id)),
-        otherCandidates: candidates.slice(1, 3).map((c) => c.t.title),
+        otherCandidates: near.filter((c) => c.t !== t).map((c) => `${describe(c.t)} (${Math.round(c.score * 100) / 100})`),
       };
     }
     const inSprint = h.due <= SPRINT_1_END;
@@ -113,9 +139,11 @@ async function makePlan() {
       },
       column: inSprint ? sprintCol.name : backlogCol.name,
       owners,
+      nearMatches: near.map((c) => `${describe(c.t)} (${Math.round(c.score * 100) / 100})`),
     };
   });
 
+  if (!board.has0018) warnings.push("La migración 0018 no está aplicada: hay que aplicarla antes de --aplicar.");
   return {
     createdAt: new Date().toISOString(),
     totalTasks: board.tasks.length,
@@ -129,13 +157,14 @@ function printPlan(plan, board) {
   console.log(`Tablero: ${plan.totalTasks} tarjetas.`);
   for (const s of plan.steps) {
     if (s.action === "actualizar") {
-      console.log(`\nACTUALIZAR (parecido ${s.score}) «${s.currentTitle}»\n  ← hito «${s.hito}»`);
+      console.log(`\nACTUALIZAR (${s.forced ? "elegida a mano" : `parecido ${s.score}`}) ${s.currentCard}\n  ← hito «${s.hito}»`);
       console.log(`  fecha ${s.before.due_date ?? "—"} → ${s.patch.start_date ? `${s.patch.start_date}…` : ""}${s.patch.due_date}, tipo ${s.patch.milestone_type ?? "sin tipo"}`);
       if (s.addOwners.length) console.log(`  + responsables: ${s.addOwners.map(name).join(", ")}`);
       if (s.otherCandidates.length) console.log(`  otras parecidas: ${s.otherCandidates.join(" | ")}`);
     } else {
       console.log(`\nCREAR «${s.row.title}»`);
       console.log(`  ${s.row.start_date ? `${s.row.start_date}…` : ""}${s.row.due_date} · ${s.row.milestone_type ?? "sin tipo"} · ${s.column} · ${s.owners.map(name).join(", ") || "sin responsable"}`);
+      if (s.nearMatches.length) console.log(`  parecidas (no se tocan): ${s.nearMatches.join(" | ")}`);
     }
   }
   if (plan.warnings.length) console.log(`\nAVISOS:\n- ${plan.warnings.join("\n- ")}`);
@@ -149,6 +178,7 @@ if (args.includes("--plan")) {
 } else {
   const plan = JSON.parse(fs.readFileSync(applyFile, "utf8"));
   const board = await readBoard();
+  if (!board.has0018) throw new Error("Falta aplicar la migración 0018 (columnas de hito).");
   // Guardas: nada ha cambiado desde el ensayo.
   if (board.tasks.length !== plan.totalTasks) {
     throw new Error(`El tablero tiene ${board.tasks.length} tarjetas y el plan se hizo con ${plan.totalTasks}. Repite el ensayo.`);

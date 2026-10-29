@@ -1,9 +1,10 @@
 {
   "_fuente": "Tabla de hitos que pasó Lander el 28-oct-2026 (chat). Títulos, fechas, tipos y responsables tal cual; año 2026.",
+  "_match": "Opcional por hito: \"match\": \"<id de tarjeta>\" fuerza cuál actualizar; \"crear\" obliga a crear.",
   "_responsables": "Nombres tal cual en la tabla. «Todos» = todos los perfiles del CRM. Quien no sea usuario del CRM se queda vacío (aviso).",
   "hitos": [
     { "due": "2026-10-28", "title": "Supabase del CRM: «Allow new users to sign up» DESACTIVADO", "type": "seguridad", "owners": ["Lander"] },
-    { "due": "2026-10-28", "title": "Apple: revisar Business, mensajes de App Review y productos de compra en la 1.0; pedir revisión urgente", "type": "tiendas", "owners": ["Lander"] },
+    { "due": "2026-10-28", "title": "Apple: revisar Business, mensajes de App Review y productos de compra en la 1.0; pedir revisión urgente", "type": "tiendas", "owners": ["Lander"], "match": "crear", "_match": "«Revisar app» (sept.) salía parecida solo por compartir «revisar» y «app»" },
     { "due": "2026-10-28", "title": "Los 12 testers dados de alta en la prueba cerrada de Play", "type": "pruebas", "owners": ["Lander"] },
     { "due": "2026-10-30", "title": "Invitar a cromifyes@gmail.com como Admin en App Store Connect", "type": "tiendas", "owners": ["Titular de la cuenta de Apple"] },
     { "due": "2026-10-30", "title": "Cloudflare: DPA de la cuenta y jurisdicción eu de R2", "type": "legal", "owners": ["Lander"] },

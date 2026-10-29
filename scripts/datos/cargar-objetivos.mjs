@@ -40,8 +40,14 @@ async function pipeline() {
 }
 
 if (mode === "plan") {
-  const [profiles, existing, p] = await Promise.all([api.get("profiles?select=id,nombre"), api.get("goals?select=id,title"), pipeline()]);
-  const warnings = [];
+  // Antes de la migración 0019 no existe la tabla goals: el ensayo sigue (no hay objetivos).
+  let has0019 = true;
+  const goalsOrEmpty = api.get("goals?select=id,title").catch(() => {
+    has0019 = false;
+    return [];
+  });
+  const [profiles, existing, p] = await Promise.all([api.get("profiles?select=id,nombre"), goalsOrEmpty, pipeline()]);
+  const warnings = has0019 ? [] : ["La migración 0019 no está aplicada: hay que aplicarla antes de --aplicar."];
   const rows = OBJETIVOS.map((o) => {
     let owner_ids = [];
     if (o.owners.includes("Todos")) owner_ids = profiles.map((x) => x.id);
