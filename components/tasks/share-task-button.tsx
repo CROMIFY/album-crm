@@ -51,7 +51,7 @@ export function ShareTaskButton({ taskId, title }: { taskId: string; title: stri
           <Share2 className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-auto whitespace-nowrap">
         {canShare && (
           <DropdownMenuItem onSelect={share}>
             <Share2 />
