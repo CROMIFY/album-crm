@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ModeToggle } from "@/components/mode-toggle";
 import { signIn } from "@/lib/actions/auth";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth";
+import { NEXT_PARAM, safeNextPath } from "@/lib/share/links";
 
 const EXPIRED_MESSAGES: Record<string, string> = {
   session: "Tu sesión ha expirado. Vuelve a iniciar sesión.",
@@ -44,7 +45,8 @@ export function LoginForm() {
       return;
     }
 
-    router.replace("/");
+    // Si venía de un enlace (p. ej. una tarea compartida), vuelve allí.
+    router.replace(safeNextPath(new URLSearchParams(window.location.search).get(NEXT_PARAM)));
     router.refresh();
   }
 

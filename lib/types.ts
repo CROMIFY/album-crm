@@ -1,3 +1,5 @@
+import type { GoalRow } from "@/lib/goals/goals";
+
 export type AccountType = "club" | "patrocinador";
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -228,6 +230,12 @@ export type TaskRow = {
   done_at: string | null;
   sprint_id: string | null;
   size: TaskSize | null;
+  /** Hito del calendario (migración 0018); sin la migración no llegan estos tres campos. */
+  is_milestone?: boolean;
+  /** Tipo de hito (lib/calendar/milestones.ts); null = hito sin tipo. */
+  milestone_type?: string | null;
+  /** Primer día de un hito de varios días; el último es due_date. */
+  start_date?: string | null;
   linked_account_id: string | null;
   linked_deal_id: string | null;
   created_at: string;
@@ -583,6 +591,11 @@ export type Database = {
         GoogleCalendarTokenRow,
         Insertable<GoogleCalendarTokenRow>,
         Partial<GoogleCalendarTokenRow>
+      >;
+      goals: Table<
+        GoalRow,
+        Insertable<GoalRow, "current_value" | "unit" | "starts_on" | "owner_ids" | "metric" | "notes">,
+        Partial<GoalRow>
       >;
       expense_categories: Table<
         ExpenseCategoryRow,

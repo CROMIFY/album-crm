@@ -5,9 +5,20 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MoveToMenu } from "@/components/move-to-menu";
+import { DragHandle } from "@/components/drag-handle";
 import { SPONSOR_LEVEL_LABELS, SPONSOR_SCOPE_LABELS, type DealWithRelations } from "@/lib/types";
 
-export function DealCard({ deal }: { deal: DealWithRelations }) {
+export function DealCard({
+  deal,
+  moveTargets,
+  onMoveTo,
+}: {
+  deal: DealWithRelations;
+  /** Etapas para el menú «Mover a…» del móvil. */
+  moveTargets: { id: string; label: string }[];
+  onMoveTo: (stage: string) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: deal.id,
   });
@@ -22,16 +33,32 @@ export function DealCard({ deal }: { deal: DealWithRelations }) {
       style={style}
       {...listeners}
       {...attributes}
-      className="cursor-grab touch-none gap-2 py-3 active:cursor-grabbing"
+      data-deal-id={deal.id}
+      data-stage={deal.stage}
+      onContextMenu={(e) => e.preventDefault()}
+      // Sin touch-none: el dedo tiene que poder hacer scroll por encima de la tarjeta
+      // (con el dedo solo se arrastra desde el asa, ver lib/dnd/sensors.ts).
+      className="cursor-grab gap-2 py-3 select-none [-webkit-touch-callout:none] active:cursor-grabbing"
     >
       <CardContent className="flex flex-col gap-1 px-3">
-        <Link
-          href={`/crm/negocios/${deal.id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="text-sm font-medium hover:underline"
-        >
-          {deal.account.nombre}
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link
+            href={`/crm/negocios/${deal.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-sm font-medium hover:underline"
+          >
+            {deal.account.nombre}
+          </Link>
+          <span className="flex items-center">
+            <DragHandle itemName={deal.account.nombre} />
+            <MoveToMenu
+              itemName={deal.account.nombre}
+              targets={moveTargets}
+              currentId={deal.stage}
+              onMove={onMoveTo}
+            />
+          </span>
+        </div>
         {deal.contact && (
           <span className="text-muted-foreground text-xs">{deal.contact.nombre}</span>
         )}

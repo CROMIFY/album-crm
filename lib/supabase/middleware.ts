@@ -9,6 +9,8 @@ import {
   evaluateSession,
   bypassesUserSession,
 } from "@/lib/supabase/session-policy";
+import { e2eHarnessEnabled, isE2eHarnessPath } from "@/lib/e2e";
+import { NEXT_PARAM, safeNextPath } from "@/lib/share/links";
 
 const PUBLIC_PATHS = ["/login"];
 
@@ -19,6 +21,11 @@ function loginRedirect(request: NextRequest, carryCookiesFrom: NextResponse, exp
   if (expiredReason) {
     url.searchParams.set("expired", expiredReason);
   }
+  // Volver a donde se iba después de entrar (p. ej. una tarea compartida por enlace).
+  const back = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  if (request.method === "GET" && safeNextPath(back) !== "/") {
+    url.searchParams.set(NEXT_PARAM, back);
+  }
 
   const redirectResponse = NextResponse.redirect(url);
   carryCookiesFrom.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
@@ -28,7 +35,10 @@ function loginRedirect(request: NextRequest, carryCookiesFrom: NextResponse, exp
 }
 
 export async function updateSession(request: NextRequest) {
-  if (bypassesUserSession(request.nextUrl.pathname)) {
+  if (
+    bypassesUserSession(request.nextUrl.pathname) ||
+    (e2eHarnessEnabled() && isE2eHarnessPath(request.nextUrl.pathname))
+  ) {
     return NextResponse.next({ request });
   }
 

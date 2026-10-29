@@ -1,0 +1,9 @@
+{
+  "_fuente": "Objetivos iniciales que pasó Lander el 28-oct-2026 (chat). Valores tal cual; los «actual del CRM» se calculan del pipeline.",
+  "objetivos": [
+    { "title": "Publicada en las dos tiendas", "current": 0, "target": 2, "unit": "tiendas", "starts_on": "2026-10-28", "due": "2026-12-01", "owners": ["Todos"] },
+    { "title": "Testers dados de alta en la prueba cerrada", "current": 1, "target": 12, "unit": "testers", "starts_on": "2026-10-28", "due": "2026-10-28", "owners": ["Lander"], "notes": "1 de 12 a 28-oct." },
+    { "title": "Clubes firmados", "metric": "clubes_cerrados_desde_inicio", "target": 6, "unit": "clubes", "starts_on": "2026-10-28", "due": "2026-11-20", "owners": ["Pablo"], "_alternativa": "clubes_cerrados (todos los clubes en Cerrado, también los firmados antes del 28-oct)" },
+    { "title": "Clubes nuevos en Pdte firma", "metric": "clubes_nuevos_pdte_firma", "target": 5, "unit": "clubes", "starts_on": "2026-10-28", "due": "2026-11-30", "owners": ["Pablo"] }
+  ]
+}

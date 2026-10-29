@@ -1,13 +1,10 @@
 "use client";
 
-import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -23,6 +20,8 @@ import { TaskFiltersBar } from "@/components/tasks/task-filters-bar";
 import { SprintSummary } from "@/components/tasks/sprint-summary";
 import { HeaderPortal } from "@/components/header-portal";
 import { reorderTask } from "@/lib/actions/tasks";
+import { useBoardSensors, useTouchAwareCollision } from "@/lib/dnd/sensors";
+import { TASK_LINK_PARAM } from "@/lib/share/links";
 import {
   CURRENT_SPRINT,
   SORT_OPTIONS,
@@ -49,6 +48,7 @@ export function TaskBoard({
   today,
   currentUserId,
   columnPrefs: initialColumnPrefs,
+  reorder = reorderTask,
 }: {
   columns: BoardColumnRow[];
   tasks: TaskWithRelations[];
@@ -63,12 +63,15 @@ export function TaskBoard({
   currentUserId: string | null;
   /** Columnas plegadas o desplegadas a mano en este navegador (cookie leída en el servidor). */
   columnPrefs: ColumnPrefs;
+  /** Guarda el movimiento; se sustituye solo en el banco de pruebas de Playwright (/e2e). */
+  reorder?: typeof reorderTask;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [columnPrefs, setColumnPrefs] = useState(initialColumnPrefs);
-  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  // ?tarea=<id> abre la ficha (enlaces compartidos por WhatsApp o donde sea).
+  const [openTaskId, setOpenTaskIdState] = useState<string | null>(() => searchParams.get(TASK_LINK_PARAM));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [optimisticTasks, moveTask] = useOptimistic(
     tasks,
@@ -82,7 +85,8 @@ export function TaskBoard({
     }
   );
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const sensors = useBoardSensors();
+  const { collisionDetection, rememberActivator, autoScroll } = useTouchAwareCollision();
 
   // Los filtros viven en la URL (la vista se puede compartir y sobrevive a recargar).
   // replaceState en vez de router.replace: no hace falta volver a pedir el tablero al servidor.
@@ -134,6 +138,25 @@ export function TaskBoard({
   );
 
   const openTask = optimisticTasks.find((t) => t.id === openTaskId) ?? null;
+
+  // La ficha abierta va en la URL, así se puede copiar de la barra y volver atrás no la pierde.
+  function setOpenTaskId(id: string | null) {
+    setOpenTaskIdState(id);
+    const params = new URLSearchParams(window.location.search);
+    if (id) params.set(TASK_LINK_PARAM, id);
+    else params.delete(TASK_LINK_PARAM);
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  // Un enlace a una tarea borrada (o que no está en el tablero) no abre nada: se avisa.
+  const warnedMissing = useRef(false);
+  useEffect(() => {
+    if (openTaskId && !openTask && !warnedMissing.current) {
+      warnedMissing.current = true;
+      toast.error("No se encuentra la tarea del enlace", { description: "Puede que se haya borrado." });
+    }
+  }, [openTaskId, openTask]);
   const activeTask = activeId ? (optimisticTasks.find((t) => t.id === activeId) ?? null) : null;
 
   const labelUsageCounts = useMemo(() => {
@@ -147,6 +170,7 @@ export function TaskBoard({
   }, [optimisticTasks]);
 
   function handleDragStart(event: DragStartEvent) {
+    rememberActivator(event);
     setActiveId(String(event.active.id));
   }
 
@@ -193,10 +217,14 @@ export function TaskBoard({
       ];
     }
 
+    persistMove({ taskId, columnId, orderedIds });
+  }
+
+  function persistMove(move: MoveAction) {
     startTransition(async () => {
-      moveTask({ taskId, columnId, orderedIds });
+      moveTask(move);
       try {
-        await reorderTask(taskId, columnId, orderedIds);
+        await reorder(move.taskId, move.columnId, move.orderedIds);
       } catch (err) {
         toast.error("No se pudo mover la tarea", {
           description: err instanceof Error ? err.message : undefined,
@@ -204,6 +232,15 @@ export function TaskBoard({
       }
     });
   }
+
+  // «Mover a…» del móvil: al final de la columna elegida.
+  function handleMoveTo(task: TaskWithRelations, columnId: string) {
+    if (task.column_id === columnId) return;
+    const target = (tasksByColumn.get(columnId) ?? []).filter((t) => t.id !== task.id);
+    persistMove({ taskId: task.id, columnId, orderedIds: [...target.map((t) => t.id), task.id] });
+  }
+
+  const moveTargets = useMemo(() => columns.map((c) => ({ id: c.id, label: c.name })), [columns]);
 
   return (
     <div className="flex h-[calc(100dvh_-_3.5rem)] min-w-0 flex-col gap-4 overflow-hidden p-4">
@@ -229,11 +266,18 @@ export function TaskBoard({
       <DndContext
         id="task-board"
         sensors={sensors}
+        collisionDetection={collisionDetection}
+        autoScroll={autoScroll}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className={`flex min-h-0 min-w-0 flex-1 gap-3 overflow-x-auto pb-2 ${isPending ? "opacity-80" : ""}`}>
+        {/* En móvil cada columna ocupa casi toda la pantalla y el scroll horizontal encaja en ellas
+            (salvo mientras se arrastra: el encaje pelearía con el auto-scroll). */}
+        <div
+          data-testid="task-board-columns"
+          className={`flex min-h-0 min-w-0 flex-1 gap-3 overflow-x-auto pb-2 md:snap-none ${activeId ? "snap-none" : "snap-x snap-mandatory"} ${isPending ? "opacity-80" : ""}`}
+        >
           {columns.map((column) => (
             <TaskColumn
               key={column.id}
@@ -244,6 +288,8 @@ export function TaskBoard({
               collapsed={isColumnCollapsed(column, columnPrefs)}
               onToggleCollapsed={() => toggleColumn(column)}
               onOpenTask={(task) => setOpenTaskId(task.id)}
+              moveTargets={moveTargets}
+              onMoveTask={handleMoveTo}
             />
           ))}
           <NewColumnButton />
