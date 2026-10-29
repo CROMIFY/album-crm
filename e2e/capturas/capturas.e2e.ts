@@ -6,6 +6,19 @@ test.skip(!process.env.CAPTURAS, "Solo con CAPTURAS=1");
 
 const OUT = "test-results/capturas";
 
+// El indicador del modo dev de Next (la «N» flotante) no es parte de la app.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const hide = () => {
+      const style = document.createElement("style");
+      style.textContent = "nextjs-portal { display: none !important; }";
+      document.head.appendChild(style);
+    };
+    if (document.head) hide();
+    else document.addEventListener("DOMContentLoaded", hide);
+  });
+});
+
 test("tablero", async ({ page }) => {
   await page.goto("/e2e/tablero");
   await page.locator('[data-task-id="s1"]').waitFor();

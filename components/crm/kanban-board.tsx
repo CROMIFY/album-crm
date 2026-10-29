@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { KanbanColumn } from "@/components/crm/kanban-column";
@@ -50,9 +50,11 @@ export function KanbanBoard({
   );
 
   const sensors = useBoardSensors();
-  const { collisionDetection, rememberActivator } = useTouchAwareCollision();
+  const { collisionDetection, rememberActivator, autoScroll } = useTouchAwareCollision();
+  const [dragging, setDragging] = useState(false);
 
   function handleDragEnd(event: DragEndEvent) {
+    setDragging(false);
     const { active, over } = event;
     if (!over) return;
     moveDeal(String(active.id), over.id as DealStage);
@@ -76,14 +78,20 @@ export function KanbanBoard({
 
   return (
     <DndContext
+      id="deal-board"
       sensors={sensors}
       collisionDetection={collisionDetection}
-      onDragStart={rememberActivator}
+      autoScroll={autoScroll}
+      onDragStart={(event) => {
+        rememberActivator(event);
+        setDragging(true);
+      }}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => setDragging(false)}
     >
       <div
         data-testid="deal-board-columns"
-        className={`min-w-0 snap-x snap-mandatory overflow-x-auto pb-2 md:snap-none ${isPending ? "opacity-80" : ""}`}
+        className={`min-w-0 overflow-x-auto pb-2 md:snap-none ${dragging ? "snap-none" : "snap-x snap-mandatory"} ${isPending ? "opacity-80" : ""}`}
       >
         <div
           className="grid gap-3"

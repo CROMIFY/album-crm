@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubtaskProgressRing } from "@/components/tasks/subtask-progress-ring";
 import { MoveToMenu } from "@/components/move-to-menu";
+import { DragHandle } from "@/components/drag-handle";
 import { setTaskDone } from "@/lib/actions/tasks";
 import { cn } from "@/lib/utils";
 import type { TaskWithRelations } from "@/lib/types";
@@ -155,7 +156,8 @@ export function TaskCard({
       data-column-id={task.column_id}
       onClick={() => !isDragging && onOpen(task)}
       onContextMenu={(e) => e.preventDefault()}
-      // Sin touch-none: el dedo tiene que poder hacer scroll por encima de la tarjeta.
+      // Sin touch-none: el dedo tiene que poder hacer scroll por encima de la tarjeta
+      // (con el dedo solo se arrastra desde el asa, ver lib/dnd/sensors.ts).
       // select-none y sin menú de pulsación larga para que no interfieran con el arrastre.
       className={cn(
         "shrink-0 cursor-grab gap-2 py-3 select-none [-webkit-touch-callout:none] active:cursor-grabbing",
@@ -166,12 +168,15 @@ export function TaskCard({
         task={task}
         onDoneChange={handleDoneChange}
         moveMenu={
-          <MoveToMenu
-            itemName={task.title}
-            targets={moveTargets}
-            currentId={task.column_id}
-            onMove={(columnId) => onMoveTo(task, columnId)}
-          />
+          <>
+            <DragHandle itemName={task.title} />
+            <MoveToMenu
+              itemName={task.title}
+              targets={moveTargets}
+              currentId={task.column_id}
+              onMove={(columnId) => onMoveTo(task, columnId)}
+            />
+          </>
         }
       />
     </Card>

@@ -84,7 +84,7 @@ export function TaskBoard({
   );
 
   const sensors = useBoardSensors();
-  const { collisionDetection, rememberActivator } = useTouchAwareCollision();
+  const { collisionDetection, rememberActivator, autoScroll } = useTouchAwareCollision();
 
   // Los filtros viven en la URL (la vista se puede compartir y sobrevive a recargar).
   // replaceState en vez de router.replace: no hace falta volver a pedir el tablero al servidor.
@@ -246,14 +246,16 @@ export function TaskBoard({
         id="task-board"
         sensors={sensors}
         collisionDetection={collisionDetection}
+        autoScroll={autoScroll}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        {/* En móvil cada columna ocupa casi toda la pantalla y el scroll horizontal encaja en ellas. */}
+        {/* En móvil cada columna ocupa casi toda la pantalla y el scroll horizontal encaja en ellas
+            (salvo mientras se arrastra: el encaje pelearía con el auto-scroll). */}
         <div
           data-testid="task-board-columns"
-          className={`flex min-h-0 min-w-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:snap-none ${isPending ? "opacity-80" : ""}`}
+          className={`flex min-h-0 min-w-0 flex-1 gap-3 overflow-x-auto pb-2 md:snap-none ${activeId ? "snap-none" : "snap-x snap-mandatory"} ${isPending ? "opacity-80" : ""}`}
         >
           {columns.map((column) => (
             <TaskColumn

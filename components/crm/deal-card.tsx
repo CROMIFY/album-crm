@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MoveToMenu } from "@/components/move-to-menu";
+import { DragHandle } from "@/components/drag-handle";
 import { SPONSOR_LEVEL_LABELS, SPONSOR_SCOPE_LABELS, type DealWithRelations } from "@/lib/types";
 
 export function DealCard({
@@ -35,7 +36,8 @@ export function DealCard({
       data-deal-id={deal.id}
       data-stage={deal.stage}
       onContextMenu={(e) => e.preventDefault()}
-      // Sin touch-none: el dedo tiene que poder hacer scroll por encima de la tarjeta.
+      // Sin touch-none: el dedo tiene que poder hacer scroll por encima de la tarjeta
+      // (con el dedo solo se arrastra desde el asa, ver lib/dnd/sensors.ts).
       className="cursor-grab gap-2 py-3 select-none [-webkit-touch-callout:none] active:cursor-grabbing"
     >
       <CardContent className="flex flex-col gap-1 px-3">
@@ -47,12 +49,15 @@ export function DealCard({
           >
             {deal.account.nombre}
           </Link>
-          <MoveToMenu
-            itemName={deal.account.nombre}
-            targets={moveTargets}
-            currentId={deal.stage}
-            onMove={onMoveTo}
-          />
+          <span className="flex items-center">
+            <DragHandle itemName={deal.account.nombre} />
+            <MoveToMenu
+              itemName={deal.account.nombre}
+              targets={moveTargets}
+              currentId={deal.stage}
+              onMove={onMoveTo}
+            />
+          </span>
         </div>
         {deal.contact && (
           <span className="text-muted-foreground text-xs">{deal.contact.nombre}</span>

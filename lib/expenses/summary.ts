@@ -7,7 +7,7 @@ import type { ExpenseRow } from "@/lib/types";
 
 type ExpenseLike = Pick<
   ExpenseRow,
-  "id" | "amount" | "billing_cycle" | "starts_at" | "next_billing_date" | "status" | "category_id"
+  "id" | "amount" | "billing_cycle" | "starts_at" | "next_billing_date" | "status" | "category_id" | "updated_at"
 >;
 
 /** Días antes de un cobro a partir de los que se avisa. */
@@ -37,20 +37,24 @@ export function daysBetween(from: string, to: string): number {
  * Fechas de los cobros ya hechos hasta `today` (incluido).
  * - Pago único: su fecha, si ya ha llegado.
  * - Recurrente: desde `starts_at`, uno por ciclo. Si está cancelado, solo los
- *   anteriores a `next_billing_date` (el siguiente que ya no se pagó); no se
- *   guarda la fecha de cancelación, así que es la mejor aproximación.
+ *   anteriores a `next_billing_date` (el siguiente que ya no se pagó) o, si no
+ *   tiene, los de hasta el día en que se tocó por última vez (`updated_at`, que
+ *   es cuando se canceló salvo que se editara después). No se guarda la fecha de
+ *   cancelación, así que es la mejor aproximación.
  */
 export function chargeDates(expense: ExpenseLike, today: string): string[] {
   if (expense.starts_at > today) return [];
   if (expense.billing_cycle === "unico") return [expense.starts_at.slice(0, 10)];
 
   const step = expense.billing_cycle === "mensual" ? 1 : 12;
-  const stopBefore = expense.status === "cancelado" ? expense.next_billing_date : null;
+  const cancelled = expense.status === "cancelado";
+  const stopBefore = cancelled ? expense.next_billing_date : null;
+  const lastDay = cancelled && !stopBefore ? expense.updated_at.slice(0, 10) : today;
   const dates: string[] = [];
   // Tope de seguridad: 50 años de cobros mensuales.
   for (let k = 0; k < 600; k++) {
     const date = addMonthsClamped(expense.starts_at, k * step);
-    if (date > today) break;
+    if (date > today || date > lastDay) break;
     if (stopBefore && date >= stopBefore) break;
     dates.push(date);
   }

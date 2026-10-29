@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   MouseSensor,
   TouchSensor,
@@ -8,6 +8,7 @@ import {
   rectIntersection,
   useSensor,
   useSensors,
+  type AutoScrollOptions,
   type CollisionDetection,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -15,28 +16,52 @@ import {
 /** Con ratón: el arrastre empieza tras mover 8 px (un clic sigue abriendo la tarjeta). */
 export const MOUSE_ACTIVATION = { distance: 8 };
 
-/**
- * Con el dedo: solo con pulsación larga (250 ms sin moverse más de 5 px). Si el
- * dedo se mueve antes, es un scroll y la tarjeta no se toca. Por eso no se usa
- * PointerSensor (el táctil también son eventos pointer y arrastraba al hacer
- * scroll) ni `touch-action: none` en la tarjeta.
- */
+/** Con el dedo, sobre el asa: pulsación de 250 ms sin moverse más de 5 px. */
 export const TOUCH_ACTIVATION = { delay: 250, tolerance: 5 };
+
+/** Marca del asa de arrastre de una tarjeta (la única zona desde la que se arrastra con el dedo). */
+export const DRAG_HANDLE_ATTR = "data-drag-handle";
+
+/**
+ * TouchSensor que solo arranca si el dedo empieza en el asa. Sobre el resto de
+ * la tarjeta el dedo hace scroll y nunca arrastra: con una pulsación larga en
+ * toda la tarjeta, un deslizamiento lento acababa arrastrando, porque el
+ * navegador no pasa a la página los primeros ~15 px del gesto y la tolerancia
+ * de 5 px no llegaba a saltar.
+ */
+export class HandleTouchSensor extends TouchSensor {
+  static activators = [
+    {
+      eventName: "onTouchStart" as const,
+      handler: (...args: Parameters<(typeof TouchSensor.activators)[number]["handler"]>) => {
+        const target = args[0].nativeEvent.target;
+        if (!(target instanceof Element) || !target.closest(`[${DRAG_HANDLE_ATTR}]`)) return false;
+        return TouchSensor.activators[0].handler(...args);
+      },
+    },
+  ];
+}
 
 export function useBoardSensors() {
   return useSensors(
     useSensor(MouseSensor, { activationConstraint: MOUSE_ACTIVATION }),
-    useSensor(TouchSensor, { activationConstraint: TOUCH_ACTIVATION })
+    useSensor(HandleTouchSensor, { activationConstraint: TOUCH_ACTIVATION })
   );
 }
+
+// Con el dedo el auto-scroll por defecto (10) cruza el tablero entero en un instante:
+// más lento y con una franja de borde más estrecha para poder soltar en la columna de al lado.
+const TOUCH_AUTO_SCROLL: AutoScrollOptions = { acceleration: 3, threshold: { x: 0.12, y: 0.15 } };
 
 /**
  * Con el dedo, la tarjeta que se arrastra ocupa casi todo el ancho de la pantalla
  * y el «choque por área» (rectIntersection) casi nunca elige la columna de al lado:
- * en arrastres táctiles manda la columna que está bajo el dedo. Con ratón no cambia nada.
+ * en arrastres táctiles manda la columna que está bajo el dedo, y el auto-scroll va
+ * más despacio. Con ratón no cambia nada.
  */
 export function useTouchAwareCollision() {
   const touchDrag = useRef(false);
+  const [isTouchDrag, setIsTouchDrag] = useState(false);
 
   const collisionDetection = useCallback<CollisionDetection>((args) => {
     if (touchDrag.current) {
@@ -48,7 +73,8 @@ export function useTouchAwareCollision() {
 
   const rememberActivator = useCallback((event: DragStartEvent) => {
     touchDrag.current = typeof TouchEvent !== "undefined" && event.activatorEvent instanceof TouchEvent;
+    setIsTouchDrag(touchDrag.current);
   }, []);
 
-  return { collisionDetection, rememberActivator };
+  return { collisionDetection, rememberActivator, autoScroll: isTouchDrag ? TOUCH_AUTO_SCROLL : true };
 }

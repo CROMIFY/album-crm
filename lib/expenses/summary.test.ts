@@ -105,6 +105,18 @@ describe("total gastado", () => {
     expect(chargeDates(cancelado, TODAY)).toEqual(["2026-01-10", "2026-02-10", "2026-03-10"]);
   });
 
+  it("un recurrente cancelado sin próxima fecha deja de sumar el día que se canceló", () => {
+    const cancelado = expense({
+      amount: 5,
+      billing_cycle: "mensual",
+      starts_at: "2026-01-10",
+      next_billing_date: null,
+      status: "cancelado",
+      updated_at: "2026-03-20T10:00:00Z",
+    });
+    expect(chargeDates(cancelado, TODAY)).toEqual(["2026-01-10", "2026-02-10", "2026-03-10"]);
+  });
+
   it("los cobros del 31 caen el último día de los meses cortos", () => {
     expect(addMonthsClamped("2026-01-31", 1)).toBe("2026-02-28");
     expect(addMonthsClamped("2028-01-31", 1)).toBe("2028-02-29");
