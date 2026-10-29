@@ -228,6 +228,12 @@ export type TaskRow = {
   done_at: string | null;
   sprint_id: string | null;
   size: TaskSize | null;
+  /** Hito del calendario (migración 0018); sin la migración no llegan estos tres campos. */
+  is_milestone?: boolean;
+  /** Tipo de hito (lib/calendar/milestones.ts); null = hito sin tipo. */
+  milestone_type?: string | null;
+  /** Primer día de un hito de varios días; el último es due_date. */
+  start_date?: string | null;
   linked_account_id: string | null;
   linked_deal_id: string | null;
   created_at: string;

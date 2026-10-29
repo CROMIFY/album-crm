@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { MILESTONE_TYPES, MILESTONE_TYPE_LABELS, isMilestoneType } from "@/lib/calendar/milestones";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -125,7 +126,18 @@ type Draft = {
   linkedAccountId: string;
   sprintId: string;
   size: string;
+  /** "none" = no es hito; NO_TYPE = hito sin tipo; si no, el tipo. */
+  milestone: string;
+  startDate: string;
 };
+
+const NO_MILESTONE = "none";
+const MILESTONE_NO_TYPE = "sin-tipo";
+
+function milestoneFromTask(task: TaskWithRelations): string {
+  if (!task.is_milestone) return NO_MILESTONE;
+  return task.milestone_type ?? MILESTONE_NO_TYPE;
+}
 
 function draftFromTask(task: TaskWithRelations): Draft {
   return {
@@ -137,6 +149,8 @@ function draftFromTask(task: TaskWithRelations): Draft {
     linkedAccountId: task.linked_account_id ?? "none",
     sprintId: task.sprint_id ?? "none",
     size: task.size ?? "none",
+    milestone: milestoneFromTask(task),
+    startDate: task.start_date ?? "",
   };
 }
 
@@ -204,6 +218,14 @@ function TaskDetailForm({
         }),
         // Igual que el sprint: solo si cambia (la columna llega con la migración 0017).
         ...(draft.size !== saved.size && { size: draft.size === "none" ? null : (draft.size as TaskSize) }),
+        // Igual: los campos de hito llegan con la migración 0018.
+        ...(draft.milestone !== saved.milestone && {
+          isMilestone: draft.milestone !== NO_MILESTONE,
+          milestoneType: isMilestoneType(draft.milestone) ? draft.milestone : null,
+        }),
+        ...((draft.startDate !== saved.startDate || (draft.milestone === NO_MILESTONE && draft.startDate)) && {
+          startDate: draft.milestone === NO_MILESTONE ? null : draft.startDate || null,
+        }),
       });
       setSaved(draft);
       toast.success("Cambios guardados");
@@ -295,6 +317,38 @@ function TaskDetailForm({
             <Label className="text-xs">Fecha límite</Label>
             <Input type="date" value={draft.dueDate} onChange={(e) => set("dueDate", e.target.value)} />
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs">Hito del calendario</Label>
+            <Select value={draft.milestone} onValueChange={(v) => set("milestone", v)}>
+              <SelectTrigger className="w-full" aria-label="Hito del calendario">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_MILESTONE}>No es hito</SelectItem>
+                <SelectItem value={MILESTONE_NO_TYPE}>Hito sin tipo</SelectItem>
+                {MILESTONE_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {MILESTONE_TYPE_LABELS[type]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {draft.milestone !== NO_MILESTONE && (
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">Desde (si dura varios días)</Label>
+              <Input
+                type="date"
+                aria-label="Desde"
+                value={draft.startDate}
+                max={draft.dueDate || undefined}
+                onChange={(e) => set("startDate", e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">

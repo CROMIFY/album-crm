@@ -178,6 +178,9 @@ export async function updateTask(
     linkedDealId: string | null;
     sprintId: string | null;
     size: TaskSize | null;
+    isMilestone: boolean;
+    milestoneType: string | null;
+    startDate: string | null;
   }>
 ) {
   const supabase = await createClient();
@@ -198,6 +201,9 @@ export async function updateTask(
       ...(input.linkedDealId !== undefined && { linked_deal_id: input.linkedDealId }),
       ...(input.sprintId !== undefined && { sprint_id: input.sprintId }),
       ...(input.size !== undefined && { size: input.size }),
+      ...(input.isMilestone !== undefined && { is_milestone: input.isMilestone }),
+      ...(input.milestoneType !== undefined && { milestone_type: input.milestoneType }),
+      ...(input.startDate !== undefined && { start_date: input.startDate }),
     })
     .eq("id", taskId);
   if (error) throw new Error(error.message);
