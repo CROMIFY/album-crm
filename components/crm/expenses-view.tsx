@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { RotateCw, Trash2 } from "lucide-react";
+import { AlertTriangle, RotateCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,33 +27,48 @@ import { HeaderPortal } from "@/components/header-portal";
 import { ExpenseFormDialog } from "@/components/crm/expense-form-dialog";
 import { ManageExpenseCategoriesDialog } from "@/components/crm/manage-expense-categories-dialog";
 import { setExpenseStatus, deleteExpense, renewExpense } from "@/lib/actions/expenses";
-import { EXPENSE_BILLING_CYCLE_LABELS, monthlyRecurringTotal } from "@/lib/types";
+import {
+  annualRecurringCost,
+  monthlyProrated,
+  spentByCategory,
+  totalSpent,
+  upcomingCharges,
+} from "@/lib/expenses/summary";
+import { EXPENSE_BILLING_CYCLE_LABELS } from "@/lib/types";
 import type { ExpenseCategoryRow, ExpenseStatus, ExpenseWithRelations } from "@/lib/types";
 
 const EUR = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 
+function formatDay(day: string) {
+  return new Date(`${day.slice(0, 10)}T00:00:00Z`).toLocaleDateString("es-ES", { timeZone: "UTC" });
+}
+
+function whenLabel(daysUntil: number) {
+  if (daysUntil < 0) return `vencido hace ${-daysUntil} ${daysUntil === -1 ? "día" : "días"}`;
+  if (daysUntil === 0) return "hoy";
+  if (daysUntil === 1) return "mañana";
+  return `en ${daysUntil} días`;
+}
+
 export function ExpensesView({
   expenses,
   categories,
+  today,
 }: {
   expenses: ExpenseWithRelations[];
   categories: ExpenseCategoryRow[];
+  /** YYYY-MM-DD en hora de Madrid; lo calcula el servidor. */
+  today: string;
 }) {
   const [categoryFilter, setCategoryFilter] = useState("none");
   const [statusFilter, setStatusFilter] = useState<ExpenseStatus | "todos">("activo");
 
-  const monthlyTotal = useMemo(() => monthlyRecurringTotal(expenses), [expenses]);
-
-  const byCategory = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of expenses) {
-      if (e.status !== "activo" || e.billing_cycle === "unico") continue;
-      const key = e.category_id ?? "none";
-      const monthly = e.billing_cycle === "anual" ? e.amount / 12 : e.amount;
-      map.set(key, (map.get(key) ?? 0) + monthly);
-    }
-    return map;
-  }, [expenses]);
+  // El resumen va sobre todos los gastos, sin los filtros de la lista.
+  const spent = useMemo(() => totalSpent(expenses, today), [expenses, today]);
+  const annual = useMemo(() => annualRecurringCost(expenses), [expenses]);
+  const prorated = useMemo(() => monthlyProrated(expenses), [expenses]);
+  const byCategory = useMemo(() => spentByCategory(expenses, today), [expenses, today]);
+  const upcoming = useMemo(() => upcomingCharges(expenses, today), [expenses, today]);
 
   const filtered = expenses.filter((e) => {
     if (categoryFilter !== "none" && e.category_id !== categoryFilter) return false;
@@ -84,39 +99,89 @@ export function ExpensesView({
       </HeaderPortal>
       <h1 className="text-lg font-semibold">Gastos</h1>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <SummaryCard
+          testId="gastado-total"
+          title="Gastado en total"
+          value={spent}
+          hint="Todo lo pagado hasta hoy: puntuales y cada cobro hecho de los recurrentes."
+        />
+        <SummaryCard
+          testId="coste-anual"
+          title="Coste anual recurrente"
+          value={annual}
+          hint="Un año de las suscripciones activas: mensuales × 12 + anuales."
+        />
+        <SummaryCard
+          testId="mensual-prorrateado"
+          title="Mensual prorrateado"
+          value={prorated}
+          hint="El coste anual repartido en 12 meses; no es lo que se cobra cada mes."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Gasto mensual recurrente</CardTitle>
+            <CardTitle className="text-sm font-medium">Por categoría</CardTitle>
+            <p className="text-muted-foreground text-xs">Total gastado hasta hoy.</p>
           </CardHeader>
-          <CardContent className="text-3xl font-semibold tabular-nums">
-            {EUR.format(monthlyTotal)}
+          <CardContent className="flex flex-col gap-2">
+            {byCategory.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Todavía no hay nada pagado.</p>
+            ) : (
+              byCategory.map(({ categoryId, total }) => {
+                const category = categories.find((c) => c.id === categoryId);
+                return (
+                  <div key={categoryId ?? "none"} className="flex items-center justify-between text-sm">
+                    <Badge
+                      variant="secondary"
+                      style={category ? { backgroundColor: `${category.color}26` } : undefined}
+                    >
+                      {category?.name ?? "Sin categoría"}
+                    </Badge>
+                    <span className="tabular-nums">{EUR.format(total)}</span>
+                  </div>
+                );
+              })
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Por categoría</CardTitle>
+            <CardTitle className="text-sm font-medium">Próximos cobros</CardTitle>
+            <p className="text-muted-foreground text-xs">
+              Suscripciones activas por fecha. Se avisa de las de menos de 30 días.
+            </p>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {byCategory.size === 0 ? (
-              <p className="text-muted-foreground text-sm">Sin suscripciones activas.</p>
+            {upcoming.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Sin cobros previstos.</p>
             ) : (
-              [...byCategory.entries()]
-                .sort(([, a], [, b]) => b - a)
-                .map(([categoryId, total]) => {
-                  const category = categories.find((c) => c.id === categoryId);
-                  return (
-                    <div key={categoryId} className="flex items-center justify-between text-sm">
-                      <Badge
-                        variant="secondary"
-                        style={category ? { backgroundColor: `${category.color}26` } : undefined}
-                      >
-                        {category?.name ?? "Sin categoría"}
-                      </Badge>
-                      <span className="tabular-nums">{EUR.format(total)}</span>
-                    </div>
-                  );
-                })
+              upcoming.map(({ expense, date, daysUntil, soon }) => (
+                <div
+                  key={expense.id}
+                  data-testid="proximo-cobro"
+                  data-soon={soon}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {soon && (
+                      <AlertTriangle
+                        className="h-3.5 w-3.5 shrink-0 text-[var(--chart-4)]"
+                        aria-label="Cobro en menos de 30 días"
+                      />
+                    )}
+                    <span className="truncate">{expense.name}</span>
+                  </span>
+                  <span className="flex shrink-0 flex-col items-end">
+                    <span className="tabular-nums">{EUR.format(expense.amount)}</span>
+                    <span className={soon ? "text-xs font-medium" : "text-muted-foreground text-xs"}>
+                      {formatDay(date)} · {whenLabel(daysUntil)}
+                    </span>
+                  </span>
+                </div>
+              ))
             )}
           </CardContent>
         </Card>
@@ -173,6 +238,30 @@ export function ExpensesView({
   );
 }
 
+function SummaryCard({
+  testId,
+  title,
+  value,
+  hint,
+}: {
+  testId: string;
+  title: string;
+  value: number;
+  hint: string;
+}) {
+  return (
+    <Card data-testid={testId}>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-1">
+        <span className="text-3xl font-semibold tabular-nums">{EUR.format(value)}</span>
+        <span className="text-muted-foreground text-xs">{hint}</span>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ExpenseRow({
   expense,
   categories,
@@ -210,7 +299,11 @@ function ExpenseRow({
   }
 
   return (
-    <Card className={expense.status === "cancelado" ? "opacity-60" : undefined}>
+    <Card
+      data-testid="gasto"
+      data-ciclo={expense.billing_cycle}
+      className={expense.status === "cancelado" ? "opacity-60" : undefined}
+    >
       <CardContent className="flex flex-wrap items-center justify-between gap-3 text-sm">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
@@ -225,8 +318,8 @@ function ExpenseRow({
           <p className="text-muted-foreground text-xs">
             {expense.vendor && `${expense.vendor} · `}
             {EXPENSE_BILLING_CYCLE_LABELS[expense.billing_cycle]}
-            {expense.next_billing_date &&
-              ` · próxima: ${new Date(expense.next_billing_date).toLocaleDateString("es-ES")}`}
+            {expense.billing_cycle === "unico" && ` · ${formatDay(expense.starts_at)}`}
+            {expense.next_billing_date && ` · próxima: ${formatDay(expense.next_billing_date)}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -244,14 +337,18 @@ function ExpenseRow({
             </Button>
           )}
           <ExpenseFormDialog categories={categories} expense={expense} />
-          <Button variant="outline" size="sm" onClick={handleToggleStatus}>
-            {expense.status === "activo" ? "Cancelar" : "Reactivar"}
-          </Button>
+          {/* Un pago único ya está hecho: no se cancela (se edita o se borra). */}
+          {expense.billing_cycle !== "unico" && (
+            <Button variant="outline" size="sm" onClick={handleToggleStatus}>
+              {expense.status === "activo" ? "Cancelar" : "Reactivar"}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
             className="h-7 w-7"
             onClick={() => setConfirmDelete(true)}
+            aria-label={`Eliminar ${expense.name}`}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>

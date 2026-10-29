@@ -48,10 +48,10 @@ export default async function Home() {
         <Link href="/crm/gastos">
           <KpiCard
             icon={<Receipt className="h-4 w-4" />}
-            label="Gasto mensual recurrente"
+            label="Mensual prorrateado"
             value={Math.round(kpis.monthlyExpenses)}
             suffix=" €"
-            sublabel="suscripciones activas"
+            sublabel="coste anual de las suscripciones ÷ 12"
           />
         </Link>
       </div>

@@ -60,4 +60,26 @@ describe("LoginForm", () => {
     await waitFor(() => expect(signIn).toHaveBeenCalled());
     expect(replace).not.toHaveBeenCalled();
   });
+
+  async function loginFrom(search: string) {
+    window.history.replaceState(null, "", `/login${search}`);
+    signIn.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<LoginForm />);
+    await user.type(screen.getByLabelText("Email"), "user@example.com");
+    await user.type(screen.getByLabelText("Contraseña"), "hunter2");
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    window.history.replaceState(null, "", "/");
+  }
+
+  it("vuelve a la tarea del enlace compartido después de entrar", async () => {
+    await loginFrom("?next=%2Ftareas%3Ftarea%3Dabc");
+    expect(replace).toHaveBeenCalledWith("/tareas?tarea=abc");
+  });
+
+  it("no sigue un ?next= que saque del CRM", async () => {
+    await loginFrom("?next=https%3A%2F%2Fevil.example");
+    expect(replace).toHaveBeenCalledWith("/");
+  });
 });

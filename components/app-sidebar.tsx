@@ -11,6 +11,8 @@ import {
   Receipt,
   Rocket,
   Bug,
+  CalendarDays,
+  Target,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +31,8 @@ const NAV = [
   { href: "/crm/clubes", label: "Clubes", icon: Shield },
   { href: "/crm/patrocinios", label: "Patrocinios", icon: Handshake },
   { href: "/tareas", label: "Tareas", icon: KanbanSquare },
+  { href: "/calendario", label: "Calendario", icon: CalendarDays },
+  { href: "/objetivos", label: "Objetivos", icon: Target },
   { href: "/crm/reuniones", label: "Reuniones", icon: CalendarClock },
   { href: "/crm/gastos", label: "Gastos", icon: Receipt },
   { href: "/crm/deploys", label: "Deploys", icon: Rocket },

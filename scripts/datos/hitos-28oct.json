@@ -1,0 +1,26 @@
+{
+  "_fuente": "Tabla de hitos que pasó Lander el 28-oct-2026 (chat). Títulos, fechas, tipos y responsables tal cual; año 2026.",
+  "_match": "Opcional por hito: \"match\": \"<id de tarjeta>\" fuerza cuál actualizar; \"crear\" obliga a crear.",
+  "_responsables": "Nombres tal cual en la tabla. «Todos» = todos los perfiles del CRM. Quien no sea usuario del CRM se queda vacío (aviso).",
+  "hitos": [
+    { "due": "2026-10-28", "title": "Supabase del CRM: «Allow new users to sign up» DESACTIVADO", "type": "seguridad", "owners": ["Lander"] },
+    { "due": "2026-10-28", "title": "Apple: revisar Business, mensajes de App Review y productos de compra en la 1.0; pedir revisión urgente", "type": "tiendas", "owners": ["Lander"], "match": "crear", "_match": "«Revisar app» (sept.) salía parecida solo por compartir «revisar» y «app»" },
+    { "due": "2026-10-28", "title": "Los 12 testers dados de alta en la prueba cerrada de Play", "type": "pruebas", "owners": ["Lander"], "match": "crear", "_match": "Lander 28-oct: crear; «Play: 9 testers más» (8666f011) está en Hecho" },
+    { "due": "2026-10-30", "title": "Invitar a cromifyes@gmail.com como Admin en App Store Connect", "type": "tiendas", "owners": ["Titular de la cuenta de Apple"] },
+    { "due": "2026-10-30", "title": "Cloudflare: DPA de la cuenta y jurisdicción eu de R2", "type": "legal", "owners": ["Lander"] },
+    { "due": "2026-10-31", "title": "Fotos de jugadores a bucket privado con URL prefirmadas, en develop", "type": "despliegue", "owners": ["Lander"] },
+    { "due": "2026-11-02", "title": "Límite de Apple: desplegar API y app (o seguir sin la UX); fotos privadas se despliegan sí o sí; comprobar migraciones 0069/0070", "type": "despliegue", "owners": ["Lander"] },
+    { "due": "2026-11-06", "title": "CI de album-api y album-app en verde + protección de rama en main", "type": "tests", "owners": ["Lander"] },
+    { "due": "2026-11-07", "title": "Auditoría de seguridad con subagentes contra copia local", "type": "seguridad", "owners": ["Lander"], "match": "1310d7f5", "_match": "Lander 28-oct: actualizar «Auditoría de seguridad (Opus), solo en local o pruebas»" },
+    { "due": "2026-11-09", "title": "Contrato de clubes y precio Logo/Vídeo cerrados; privacidad y condiciones publicadas en la landing", "type": "legal", "owners": ["Pablo", "Jaime"], "note": "Responsable en la tabla: «Pablo (lo legal, Jaime)».", "match": "crear", "_match": "Lander 28-oct: crear; «Precio del nivel Logo y del nivel Vídeo» (732ce032) está en Hecho y solo cubre una parte" },
+    { "start": "2026-11-09", "due": "2026-11-13", "title": "Arreglar hallazgos críticos y altos de la auditoría", "type": "seguridad", "owners": ["Lander", "Jaime"] },
+    { "due": "2026-11-12", "title": "Fin de los 14 días de prueba cerrada: pedir acceso a producción en Play", "type": "pruebas", "owners": ["Lander"], "note": "Fecha estimada (~12-nov)." },
+    { "due": "2026-11-13", "title": "Sentry en album-panel-admin, visible en Errores del CRM", "type": "tests", "owners": ["Lander"] },
+    { "start": "2026-11-16", "due": "2026-11-20", "title": "Ventana de cambios por el feedback de los testers", "type": "pruebas", "owners": ["Lander", "Jaime"] },
+    { "due": "2026-11-20", "title": "Todo listo y desplegado en las dos tiendas; esquema congelado", "type": "despliegue", "owners": ["Todos"] },
+    { "due": "2026-11-20", "title": "Firmas de los 6 clubes en Pdte firma", "type": "comercial", "owners": ["Pablo"] },
+    { "start": "2026-11-21", "due": "2026-11-30", "title": "Colchón para imprevistos", "type": null, "owners": [] },
+    { "due": "2026-11-30", "title": "5 clubes nuevos en Pdte firma", "type": "comercial", "owners": ["Pablo"] },
+    { "due": "2026-12-01", "title": "Publicada en Google Play y App Store", "type": "lanzamiento", "owners": ["Todos"] }
+  ]
+}
