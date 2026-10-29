@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubtaskProgressRing } from "@/components/tasks/subtask-progress-ring";
+import { MoveToMenu } from "@/components/move-to-menu";
 import { setTaskDone } from "@/lib/actions/tasks";
 import { cn } from "@/lib/utils";
 import type { TaskWithRelations } from "@/lib/types";
@@ -29,9 +30,11 @@ function initialsFor(nombre: string) {
 function TaskCardContent({
   task,
   onDoneChange,
+  moveMenu,
 }: {
   task: TaskWithRelations;
   onDoneChange?: (checked: boolean) => void;
+  moveMenu?: React.ReactNode;
 }) {
   const doneSubtasks = task.subtasks?.filter((s) => s.done).length ?? 0;
   const totalSubtasks = task.subtasks?.length ?? 0;
@@ -58,9 +61,10 @@ function TaskCardContent({
             onCheckedChange={(c) => onDoneChange?.(c === true)}
           />
         </div>
-        <span className={cn("text-sm font-medium", task.done && "text-muted-foreground line-through")}>
+        <span className={cn("flex-1 text-sm font-medium", task.done && "text-muted-foreground line-through")}>
           {task.title}
         </span>
+        {moveMenu}
       </div>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -112,9 +116,14 @@ function TaskCardContent({
 export function TaskCard({
   task,
   onOpen,
+  moveTargets,
+  onMoveTo,
 }: {
   task: TaskWithRelations;
   onOpen: (task: TaskWithRelations) => void;
+  /** Columnas para el menú «Mover a…» del móvil. */
+  moveTargets: { id: string; label: string }[];
+  onMoveTo: (task: TaskWithRelations, columnId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -142,13 +151,29 @@ export function TaskCard({
       style={style}
       {...listeners}
       {...attributes}
+      data-task-id={task.id}
+      data-column-id={task.column_id}
       onClick={() => !isDragging && onOpen(task)}
+      onContextMenu={(e) => e.preventDefault()}
+      // Sin touch-none: el dedo tiene que poder hacer scroll por encima de la tarjeta.
+      // select-none y sin menú de pulsación larga para que no interfieran con el arrastre.
       className={cn(
-        "shrink-0 cursor-grab touch-none gap-2 py-3 active:cursor-grabbing",
+        "shrink-0 cursor-grab gap-2 py-3 select-none [-webkit-touch-callout:none] active:cursor-grabbing",
         isDragging && "opacity-40"
       )}
     >
-      <TaskCardContent task={task} onDoneChange={handleDoneChange} />
+      <TaskCardContent
+        task={task}
+        onDoneChange={handleDoneChange}
+        moveMenu={
+          <MoveToMenu
+            itemName={task.title}
+            targets={moveTargets}
+            currentId={task.column_id}
+            onMove={(columnId) => onMoveTo(task, columnId)}
+          />
+        }
+      />
     </Card>
   );
 }

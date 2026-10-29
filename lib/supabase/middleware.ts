@@ -9,6 +9,7 @@ import {
   evaluateSession,
   bypassesUserSession,
 } from "@/lib/supabase/session-policy";
+import { e2eHarnessEnabled, isE2eHarnessPath } from "@/lib/e2e";
 
 const PUBLIC_PATHS = ["/login"];
 
@@ -28,7 +29,10 @@ function loginRedirect(request: NextRequest, carryCookiesFrom: NextResponse, exp
 }
 
 export async function updateSession(request: NextRequest) {
-  if (bypassesUserSession(request.nextUrl.pathname)) {
+  if (
+    bypassesUserSession(request.nextUrl.pathname) ||
+    (e2eHarnessEnabled() && isE2eHarnessPath(request.nextUrl.pathname))
+  ) {
     return NextResponse.next({ request });
   }
 

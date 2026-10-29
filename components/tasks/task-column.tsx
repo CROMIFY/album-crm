@@ -28,6 +28,8 @@ export function TaskColumn({
   collapsed,
   onToggleCollapsed,
   onOpenTask,
+  moveTargets,
+  onMoveTask,
 }: {
   column: BoardColumnRow;
   /** Las tareas que se pintan (ya filtradas y ordenadas). */
@@ -39,6 +41,8 @@ export function TaskColumn({
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onOpenTask: (task: TaskWithRelations) => void;
+  moveTargets: { id: string; label: string }[];
+  onMoveTask: (task: TaskWithRelations, columnId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const [editing, setEditing] = useState(false);
@@ -91,8 +95,9 @@ export function TaskColumn({
     return (
       <div
         ref={setNodeRef}
+        data-column-id={column.id}
         className={cn(
-          "flex w-10 shrink-0 flex-col items-center gap-2 rounded-lg border bg-muted/30 py-2 transition-colors",
+          "flex w-10 shrink-0 snap-start flex-col items-center gap-2 rounded-lg border bg-muted/30 py-2 transition-colors",
           isOver && "bg-accent border-accent-foreground/20"
         )}
       >
@@ -119,7 +124,10 @@ export function TaskColumn({
   }
 
   return (
-    <div className="flex min-h-0 w-72 shrink-0 flex-col gap-2">
+    <div
+      className="flex min-h-0 w-[85vw] max-w-72 shrink-0 snap-start flex-col gap-2 md:w-72"
+      data-column-name={column.name}
+    >
       <div className="flex items-center justify-between px-1">
         {editing ? (
           <Input
@@ -173,6 +181,7 @@ export function TaskColumn({
       </div>
       <div
         ref={setNodeRef}
+        data-column-id={column.id}
         className={cn(
           "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-2 transition-colors",
           isOver && "bg-accent border-accent-foreground/20"
@@ -180,7 +189,13 @@ export function TaskColumn({
       >
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onOpen={onOpenTask} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onOpen={onOpenTask}
+              moveTargets={moveTargets}
+              onMoveTo={onMoveTask}
+            />
           ))}
         </SortableContext>
         <QuickAddTask columnId={column.id} />

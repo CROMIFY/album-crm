@@ -137,7 +137,7 @@ function setUrl(search: string) {
 function titlesIn(columnName: string): string[] {
   // Por texto y no por rol: con un menú abierto, Radix oculta el resto de la página a la accesibilidad.
   const header = screen.getByText(columnName, { selector: "button" });
-  const column = header.closest("div.w-72") as HTMLElement;
+  const column = header.closest("[data-column-name]") as HTMLElement;
   return Array.from(column.querySelectorAll("[data-slot=card] span.text-sm")).map((el) => el.textContent ?? "");
 }
 
@@ -288,7 +288,7 @@ describe("TaskBoard: filtros y orden", () => {
   it("el botón de columna sigue siendo el nombre aunque haya filtros", () => {
     setUrl(`?usuario=${lander.id}`);
     renderBoard();
-    const header = screen.getByText("Por hacer", { selector: "button" }).closest("div.w-72") as HTMLElement;
+    const header = screen.getByText("Por hacer", { selector: "button" }).closest("[data-column-name]") as HTMLElement;
     expect(within(header).getByText("1/4")).toBeInTheDocument();
   });
 });
