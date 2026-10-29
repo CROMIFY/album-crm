@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   DndContext,
@@ -21,6 +21,7 @@ import { SprintSummary } from "@/components/tasks/sprint-summary";
 import { HeaderPortal } from "@/components/header-portal";
 import { reorderTask } from "@/lib/actions/tasks";
 import { useBoardSensors, useTouchAwareCollision } from "@/lib/dnd/sensors";
+import { TASK_LINK_PARAM } from "@/lib/share/links";
 import {
   CURRENT_SPRINT,
   SORT_OPTIONS,
@@ -69,7 +70,8 @@ export function TaskBoard({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [columnPrefs, setColumnPrefs] = useState(initialColumnPrefs);
-  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  // ?tarea=<id> abre la ficha (enlaces compartidos por WhatsApp o donde sea).
+  const [openTaskId, setOpenTaskIdState] = useState<string | null>(() => searchParams.get(TASK_LINK_PARAM));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [optimisticTasks, moveTask] = useOptimistic(
     tasks,
@@ -136,6 +138,25 @@ export function TaskBoard({
   );
 
   const openTask = optimisticTasks.find((t) => t.id === openTaskId) ?? null;
+
+  // La ficha abierta va en la URL, así se puede copiar de la barra y volver atrás no la pierde.
+  function setOpenTaskId(id: string | null) {
+    setOpenTaskIdState(id);
+    const params = new URLSearchParams(window.location.search);
+    if (id) params.set(TASK_LINK_PARAM, id);
+    else params.delete(TASK_LINK_PARAM);
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  // Un enlace a una tarea borrada (o que no está en el tablero) no abre nada: se avisa.
+  const warnedMissing = useRef(false);
+  useEffect(() => {
+    if (openTaskId && !openTask && !warnedMissing.current) {
+      warnedMissing.current = true;
+      toast.error("No se encuentra la tarea del enlace", { description: "Puede que se haya borrado." });
+    }
+  }, [openTaskId, openTask]);
   const activeTask = activeId ? (optimisticTasks.find((t) => t.id === activeId) ?? null) : null;
 
   const labelUsageCounts = useMemo(() => {

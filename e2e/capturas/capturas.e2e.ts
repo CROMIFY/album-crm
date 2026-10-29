@@ -55,3 +55,10 @@ test("calendario escritorio", async ({ page }) => {
   await page.getByRole("region", { name: "Mes" }).waitFor();
   await page.screenshot({ path: `${OUT}/calendario-escritorio.png`, fullPage: true });
 });
+
+test("compartir tarea", async ({ page }) => {
+  await page.goto("/e2e/tablero?tarea=s3");
+  await page.getByRole("button", { name: "Compartir tarea" }).click();
+  await page.getByRole("menuitem", { name: "Copiar enlace" }).waitFor();
+  await page.screenshot({ path: `${OUT}/compartir-tarea.png` });
+});

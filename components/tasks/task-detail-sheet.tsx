@@ -43,6 +43,7 @@ import {
   deleteSubtask,
 } from "@/lib/actions/tasks";
 import { CreateLabelButton } from "@/components/tasks/create-label-button";
+import { ShareTaskButton } from "@/components/tasks/share-task-button";
 import { TASK_SIZES } from "@/lib/tasks/sprints";
 import type { AccountRow, LabelRow, ProfileRow, SprintRow, TaskPriority, TaskSize, TaskWithRelations } from "@/lib/types";
 
@@ -270,7 +271,7 @@ function TaskDetailForm({
 
   return (
     <>
-      <SheetHeader>
+      <SheetHeader className="pr-12">
         <SheetTitle className="flex items-center gap-2">
           <Checkbox
             checked={task.done}
@@ -286,6 +287,7 @@ function TaskDetailForm({
             onChange={(e) => set("title", e.target.value)}
             className="border-none px-0 text-base font-semibold shadow-none focus-visible:ring-0"
           />
+          <ShareTaskButton taskId={task.id} title={saved.title} />
         </SheetTitle>
       </SheetHeader>
 

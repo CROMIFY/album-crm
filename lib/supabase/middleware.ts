@@ -10,6 +10,7 @@ import {
   bypassesUserSession,
 } from "@/lib/supabase/session-policy";
 import { e2eHarnessEnabled, isE2eHarnessPath } from "@/lib/e2e";
+import { NEXT_PARAM, safeNextPath } from "@/lib/share/links";
 
 const PUBLIC_PATHS = ["/login"];
 
@@ -19,6 +20,11 @@ function loginRedirect(request: NextRequest, carryCookiesFrom: NextResponse, exp
   url.search = "";
   if (expiredReason) {
     url.searchParams.set("expired", expiredReason);
+  }
+  // Volver a donde se iba después de entrar (p. ej. una tarea compartida por enlace).
+  const back = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  if (request.method === "GET" && safeNextPath(back) !== "/") {
+    url.searchParams.set(NEXT_PARAM, back);
   }
 
   const redirectResponse = NextResponse.redirect(url);
