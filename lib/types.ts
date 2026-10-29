@@ -1,3 +1,5 @@
+import type { GoalRow } from "@/lib/goals/goals";
+
 export type AccountType = "club" | "patrocinador";
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -589,6 +591,11 @@ export type Database = {
         GoogleCalendarTokenRow,
         Insertable<GoogleCalendarTokenRow>,
         Partial<GoogleCalendarTokenRow>
+      >;
+      goals: Table<
+        GoalRow,
+        Insertable<GoalRow, "current_value" | "unit" | "starts_on" | "owner_ids" | "metric" | "notes">,
+        Partial<GoalRow>
       >;
       expense_categories: Table<
         ExpenseCategoryRow,
