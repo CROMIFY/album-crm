@@ -1,8 +1,17 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { buildCsp } from "@/lib/csp";
+import { isPreviewBot, taskIdFromUrl } from "@/lib/link-preview";
 
 export async function proxy(request: NextRequest) {
+  // Los bots de vista previa (WhatsApp...) no tienen sesión: les servimos solo el título de la tarea.
+  const taskId = isPreviewBot(request.headers.get("user-agent"))
+    ? taskIdFromUrl(request.nextUrl.pathname, request.nextUrl.searchParams)
+    : null;
+  if (taskId) {
+    return NextResponse.rewrite(new URL(`/api/og/tarea/${taskId}`, request.url));
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV === "development";
   const cspHeader = buildCsp(nonce, isDev);
