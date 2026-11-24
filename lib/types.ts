@@ -203,6 +203,51 @@ export type CadenceStepRow = {
   position: number;
 };
 
+export type ContactChannel = "email" | "llamada" | "whatsapp" | "reunion" | "otro";
+export type ContactOutcome =
+  | "sin_respuesta"
+  | "en_ello"
+  | "respondio"
+  | "interesado"
+  | "rechazo"
+  | "otro";
+
+export const CONTACT_CHANNELS: ContactChannel[] = ["email", "llamada", "whatsapp", "reunion", "otro"];
+export const CONTACT_CHANNEL_LABELS: Record<ContactChannel, string> = {
+  email: "Email",
+  llamada: "Llamada",
+  whatsapp: "WhatsApp",
+  reunion: "Reunión",
+  otro: "Otro",
+};
+export const CONTACT_OUTCOMES: ContactOutcome[] = [
+  "sin_respuesta",
+  "en_ello",
+  "respondio",
+  "interesado",
+  "rechazo",
+  "otro",
+];
+export const CONTACT_OUTCOME_LABELS: Record<ContactOutcome, string> = {
+  sin_respuesta: "Sin respuesta",
+  en_ello: "Dice que está en ello",
+  respondio: "Ha respondido",
+  interesado: "Interesado",
+  rechazo: "Ha rechazado",
+  otro: "Otro",
+};
+
+export type ContactLogRow = {
+  id: string;
+  deal_id: string;
+  contacted_on: string;
+  channel: ContactChannel;
+  outcome: ContactOutcome;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
 export type BoardColumnRow = {
   id: string;
   name: string;
@@ -511,6 +556,11 @@ export type Database = {
         CadenceStepRow,
         Insertable<CadenceStepRow, "done" | "done_at" | "position">,
         Partial<CadenceStepRow>
+      >;
+      contact_log: Table<
+        ContactLogRow,
+        Insertable<ContactLogRow, "contacted_on" | "channel" | "outcome" | "note" | "created_by">,
+        Partial<ContactLogRow>
       >;
       board_columns: Table<
         BoardColumnRow,
