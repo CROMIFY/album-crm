@@ -34,8 +34,11 @@ import {
   addCadenceStep,
   toggleCadenceStep,
   deleteCadenceStep,
+  addContactLog,
+  deleteContactLog,
 } from "@/lib/actions/deals";
 import { EditAccountDialog } from "@/components/crm/edit-account-dialog";
+import { DeleteAccountDialog } from "@/components/crm/delete-account-dialog";
 import { NewMeetingDialog } from "@/components/crm/new-meeting-dialog";
 import Link from "next/link";
 import {
@@ -46,10 +49,17 @@ import {
   SPONSOR_LEVEL_LABELS,
   ACCOUNT_TYPE_LABELS,
   MEETING_STATUS_LABELS,
+  CONTACT_CHANNELS,
+  CONTACT_CHANNEL_LABELS,
+  CONTACT_OUTCOMES,
+  CONTACT_OUTCOME_LABELS,
 } from "@/lib/types";
 import type {
   AccountType,
   CadenceStepRow,
+  ContactChannel,
+  ContactLogRow,
+  ContactOutcome,
   DealStageHistoryRow,
   DealWithRelations,
   MeetingListItem,
@@ -60,12 +70,14 @@ export function DealDetail({
   deal,
   history,
   cadence,
+  contactLog,
   meetings,
   profiles,
 }: {
   deal: DealWithRelations;
   history: DealStageHistoryRow[];
   cadence: CadenceStepRow[];
+  contactLog: ContactLogRow[];
   meetings: MeetingListItem[];
   profiles: ProfileRow[];
 }) {
@@ -127,7 +139,10 @@ export function DealDetail({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium">Cuenta</CardTitle>
-            <EditAccountDialog account={deal.account} dealId={deal.id} />
+            <div className="flex items-center">
+              <EditAccountDialog account={deal.account} dealId={deal.id} />
+              <DeleteAccountDialog account={deal.account} />
+            </div>
           </CardHeader>
           <CardContent className="text-sm">
             {tipo === "patrocinador" && (deal.account.alcance || deal.account.nivel) && (
@@ -183,6 +198,8 @@ export function DealDetail({
           <CardContent className="text-sm">{deal.lost_reason}</CardContent>
         </Card>
       )}
+
+      <ContactLogCard dealId={deal.id} entries={contactLog} profiles={profiles} />
 
       <CadenceCard dealId={deal.id} steps={cadence} />
 
@@ -451,5 +468,143 @@ function MeetingRow({ meeting }: { meeting: MeetingListItem }) {
       </div>
       <Badge variant="secondary">{MEETING_STATUS_LABELS[meeting.status]}</Badge>
     </Link>
+  );
+}
+
+function ContactLogCard({
+  dealId,
+  entries,
+  profiles,
+}: {
+  dealId: string;
+  entries: ContactLogRow[];
+  profiles: ProfileRow[];
+}) {
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [canal, setCanal] = useState<ContactChannel>("email");
+  const [resultado, setResultado] = useState<ContactOutcome>("sin_respuesta");
+  const [nota, setNota] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleAdd() {
+    if (!fecha) return;
+    setLoading(true);
+    try {
+      await addContactLog(dealId, {
+        contacted_on: fecha,
+        channel: canal,
+        outcome: resultado,
+        note: nota,
+      });
+      setNota("");
+      setResultado("sin_respuesta");
+    } catch (err) {
+      toast.error("No se pudo guardar el contacto", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await deleteContactLog(id, dealId);
+    } catch (err) {
+      toast.error("No se pudo borrar la entrada", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium">Historial de contactos</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {entries.length === 0 && (
+          <p className="text-muted-foreground text-sm">Todavía no hay contactos registrados.</p>
+        )}
+        <ul className="flex flex-col gap-3">
+          {entries.map((e) => {
+            const autor = profiles.find((p) => p.id === e.created_by);
+            return (
+              <li key={e.id} className="flex items-start gap-3 text-sm">
+                <span className="text-muted-foreground w-24 shrink-0 text-xs tabular-nums">
+                  {new Date(`${e.contacted_on}T00:00:00`).toLocaleDateString("es-ES")}
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary">{CONTACT_CHANNEL_LABELS[e.channel]}</Badge>
+                    <Badge variant="outline">{CONTACT_OUTCOME_LABELS[e.outcome]}</Badge>
+                    {autor && (
+                      <span className="text-muted-foreground text-xs">{autor.nombre}</span>
+                    )}
+                  </div>
+                  {e.note && <p className="whitespace-pre-wrap">{e.note}</p>}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  aria-label="Borrar entrada"
+                  onClick={() => handleDelete(e.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="flex flex-col gap-2 border-t pt-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Fecha</Label>
+              <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Canal</Label>
+              <Select value={canal} onValueChange={(v) => setCanal(v as ContactChannel)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTACT_CHANNELS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {CONTACT_CHANNEL_LABELS[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Resultado</Label>
+              <Select value={resultado} onValueChange={(v) => setResultado(v as ContactOutcome)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTACT_OUTCOMES.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {CONTACT_OUTCOME_LABELS[o]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Textarea
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            rows={2}
+            placeholder="Qué se envió o se habló, y qué dijeron (opcional)"
+          />
+          <Button onClick={handleAdd} disabled={loading} size="sm" className="self-end">
+            {loading ? "Guardando…" : "Añadir contacto"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

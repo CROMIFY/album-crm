@@ -30,7 +30,7 @@ export async function fetchDealDetail(dealId: string) {
     .single();
   if (dealError) throw new Error(dealError.message);
 
-  const [{ data: history }, { data: cadence }] = await Promise.all([
+  const [{ data: history }, { data: cadence }, { data: contactLog }] = await Promise.all([
     supabase
       .from("deal_stage_history")
       .select("*")
@@ -41,12 +41,19 @@ export async function fetchDealDetail(dealId: string) {
       .select("*")
       .eq("deal_id", dealId)
       .order("position", { ascending: true }),
+    supabase
+      .from("contact_log")
+      .select("*")
+      .eq("deal_id", dealId)
+      .order("contacted_on", { ascending: false })
+      .order("created_at", { ascending: false }),
   ]);
 
   return {
     deal: deal as unknown as DealWithRelations,
     history: history ?? [],
     cadence: cadence ?? [],
+    contactLog: contactLog ?? [],
   };
 }
 

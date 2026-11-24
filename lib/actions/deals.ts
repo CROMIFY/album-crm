@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import {
   DEFAULT_CADENCE_TEMPLATE,
   type AccountType,
+  type ContactChannel,
+  type ContactOutcome,
   type DealStage,
   type SponsorScope,
   type SponsorLevel,
@@ -177,6 +179,51 @@ export async function toggleCadenceStep(id: string, dealId: string, done: boolea
 export async function deleteCadenceStep(id: string, dealId: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("cadence_steps").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/crm/negocios/${dealId}`);
+}
+
+// Borra la cuenta (club o patrocinador) y, por ON DELETE CASCADE, sus
+// contactos, negocios, historial y cadencia. Las reuniones y tareas enlazadas
+// quedan sin vínculo (ON DELETE SET NULL). No se puede deshacer.
+export async function deleteAccount(accountId: string, tipo: AccountType) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("accounts").delete().eq("id", accountId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(funnelPath(tipo));
+  revalidatePath("/crm/reuniones");
+  revalidatePath("/");
+}
+
+export async function addContactLog(
+  dealId: string,
+  input: {
+    contacted_on: string;
+    channel: ContactChannel;
+    outcome: ContactOutcome;
+    note?: string;
+  }
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase.from("contact_log").insert({
+    deal_id: dealId,
+    contacted_on: input.contacted_on,
+    channel: input.channel,
+    outcome: input.outcome,
+    note: input.note?.trim() || null,
+    created_by: user?.id ?? null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/crm/negocios/${dealId}`);
+}
+
+export async function deleteContactLog(id: string, dealId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("contact_log").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/crm/negocios/${dealId}`);
 }

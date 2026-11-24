@@ -28,6 +28,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       deal={data.deal}
       history={data.history}
       cadence={data.cadence}
+      contactLog={data.contactLog}
       meetings={meetings}
       profiles={(profiles ?? []) as ProfileRow[]}
     />
